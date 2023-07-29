@@ -60,6 +60,12 @@
     "GetServerTime",
     "C_LFGList",
     "C_ChallengeMode",
-    "Enum"
+    "Enum",
+    "IsLeftShiftKeyDown",
+    "print",
+    "table",
+    "pairs",
+    "ipairs",
+    "tonumber"
   ]
 }

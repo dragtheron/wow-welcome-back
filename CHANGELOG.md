@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1] - 2023-07-29
+
+### Fixed
+
+- Properly call activity registration by event system.
+  Fixes a LUA error when entering a dungeon or starting a mythic keystone.
+
 ## [1.0.0] - 2023-07-27
 
 ### Added

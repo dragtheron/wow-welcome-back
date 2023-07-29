@@ -210,7 +210,7 @@ function HaveWeMet:OnEvent(event, ...)
 
   C_Timer.After(3, function()
     HaveWeMet:CheckCharacters()
-    HaveWeMet:OnInstanceUpdate()
+    HaveWeMet.OnInstanceUpdate()
   end)
 end
 
@@ -308,7 +308,7 @@ function HaveWeMet.OnUnitTooltip(tooltip, data)
   HaveWeMet.AddTooltipInfo(knownCharacter, tooltip)
 end
 
-function HaveWeMet:OnInstanceUpdate()
+function HaveWeMet.OnInstanceUpdate()
   local name, instanceType, difficultyId, difficultyName, _, _, _, instanceId = GetInstanceInfo()
   local title = name
 
@@ -323,7 +323,7 @@ function HaveWeMet:OnInstanceUpdate()
      title = format("+%d %s", keystoneLevel, name)
   end
 
-  local activity = self:RegisterActivity("Instance", instanceId, title, keystoneLevel)
+  local activity = HaveWeMet:RegisterActivity("Instance", instanceId, title, keystoneLevel)
 
 
   if activity == false then
@@ -341,7 +341,7 @@ function HaveWeMet:OnInstanceUpdate()
   }
 
   for guid, _ in pairs(Dragtheron_WelcomeBack.LastGroup) do
-    self:AddActivity(guid, activity, additionalInfo)
+    HaveWeMet:AddActivity(guid, activity, additionalInfo)
   end
 end
 
