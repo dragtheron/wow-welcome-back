@@ -1,4 +1,5 @@
 local DIFFICULTY_CHALLENGE_MODE = 8;
+local locale = GetLocale()
 
 local HaveWeMet = {
   ["loaded"] = false,
@@ -25,11 +26,10 @@ function HaveWeMet:CleanActivities()
   end
 end
 
-function HaveWeMet:RegisterActivity(type, id, title, keystoneLevel, difficultyId)
+function HaveWeMet:RegisterActivity(type, id, keystoneLevel, difficultyId)
   self.lastActivity = {
     ["Type"] = type,
     ["Id"] = id,
-    ["Title"] = title,
     ["KeystoneLevel"] = keystoneLevel,
     ["DifficultyId"] = difficultyId,
   }
@@ -269,7 +269,9 @@ function HaveWeMet.AddActivityLine(tooltip, activity)
       encounterInfoString = format("|cff00ff00%d Kills|r", kills)
     end
 
-    local leftText = format("%s (%s)", activity.Activity.Title, encounterInfoString)
+    local activityTitle = HaveWeMet.GetActivityTitle(activity.Activity)
+
+    local leftText = format("%s (%s)", activityTitle, encounterInfoString)
     local rightText = IsLeftShiftKeyDown() and getDateString(activity.Time) or nil
     addColoredDoubleLine(tooltip, leftText, rightText, HIGHLIGHT_FONT_COLOR, HIGHLIGHT_FONT_COLOR)
   end
@@ -317,22 +319,20 @@ function HaveWeMet.OnUnitTooltip(tooltip, data)
   HaveWeMet.AddTooltipInfo(knownCharacter, tooltip)
 end
 
+
 function HaveWeMet.OnInstanceUpdate()
   local name, instanceType, difficultyId, difficultyName, _, _, _, instanceId = GetInstanceInfo()
-  local title = name
 
-  if difficultyName and difficultyName ~= "" then
-    title = format("%s %s", difficultyName, name)
-  end
+  HaveWeMet.RegisterName(instanceType, instanceId, name)
+  HaveWeMet.RegisterName("difficulty", difficultyId, difficultyName)
 
   local keystoneLevel
 
   if difficultyId ==  DIFFICULTY_CHALLENGE_MODE then
      keystoneLevel = C_ChallengeMode.GetActiveKeystoneInfo()
-     title = format("+%d %s", keystoneLevel, name)
   end
 
-  local activity = HaveWeMet:RegisterActivity("Instance", instanceId, title, keystoneLevel, difficultyId)
+  local activity = HaveWeMet:RegisterActivity(instanceType, instanceId, keystoneLevel, difficultyId)
 
   if activity == false then
     return
@@ -340,10 +340,8 @@ function HaveWeMet.OnInstanceUpdate()
 
   local additionalInfo = {
     ["Instance"] = {
-      ["Name"] = name,
       ["Type"] = instanceType,
       ["DifficultyId"] = difficultyId,
-      ["DifficultyName"] = difficultyName,
     }
   }
 
@@ -353,9 +351,10 @@ function HaveWeMet.OnInstanceUpdate()
 end
 
 function HaveWeMet:OnEncounterEnd(encounterId, encounterName, difficultyId, success)
+  HaveWeMet.RegisterName("encounter", encounterId, encounterName)
+
   local encounter = {
     ["Id"] = tonumber(encounterId),
-    ["Name"] = encounterName,
     ["DifficultyId"] = tonumber(difficultyId),
     ["Success"] = tonumber(success),
   }
@@ -426,6 +425,43 @@ function HaveWeMet:LFGApplicantTooltip()
     HaveWeMet.AddTooltipInfo(false, GameTooltip)
     GameTooltip:Show()
   end
+end
+
+function HaveWeMet.GetName(type, id)
+  return HaveWeMet.RegisterName(type, id)
+end
+
+function HaveWeMet.RegisterName(type, id, nameValue)
+  local nameIdentifier = format("%s:%s:%s", type, id, locale)
+  local names = Dragtheron_WelcomeBack["Names"] or {}
+  local name = names[nameIdentifier]
+
+  if name then
+    return name
+  end
+
+  Dragtheron_WelcomeBack["Names"] = Dragtheron_WelcomeBack["Names"] or {}
+
+  if nameValue then
+    Dragtheron_WelcomeBack["Names"][nameIdentifier] = nameValue
+  else
+    return "Unknown"
+  end
+end
+
+function HaveWeMet.GetActivityTitle(activity)
+  if activity.Title then
+    return activity.Title
+  end
+
+  local instanceName = HaveWeMet.GetName(activity.Type, activity.Id)
+
+  if activity.KeystoneLevel then
+    return format("+%d %s", activity.KeystoneLevel, instanceName)
+  end
+
+  local difficultyName = HaveWeMet.GetName("difficulty", activity.DifficultyId)
+  return format("%s %s", difficultyName, instanceName)
 end
 
 HaveWeMet.frame:RegisterEvent("GROUP_ROSTER_UPDATE")

@@ -1,6 +1,6 @@
 ## Interface: 100200
 ## Title: Welcome Back
-## Version: 1.0.3
+## Version: 1.1.0
 ## Author: Tobias Stettner (Dragtheron)
 ## Notes: Get notified when joining a group where you met a player before.
 ## Notes-deDE: Werdet benachrichtigt, wenn Eurer Gruppe bereits bekannte Spieler beitreten.

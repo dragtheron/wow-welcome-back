@@ -1,8 +1,4 @@
 package-as: WelcomeBack
 
-manual-changelog:
-  filename: CHANGELOG.md
-  markup-type: markdown
-
 ignore:
   - .vscode
