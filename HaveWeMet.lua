@@ -1,12 +1,13 @@
+local DIFFICULTY_CHALLENGE_MODE = 8;
+
 local HaveWeMet = {
   ["loaded"] = false,
   ["lastActivity"] = nil,
   ["EncounterStart"] = 0,
 }
 
-local DIFFICULTY_CHALLENGE_MODE = 8;
-
 DT_HWM = HaveWeMet
+HaveWeMet.frame = CreateFrame("Frame")
 
 local function printColored(text, color)
   print(color .. text .. "|r")
@@ -24,12 +25,13 @@ function HaveWeMet:CleanActivities()
   end
 end
 
-function HaveWeMet:RegisterActivity(type, id, title, keystoneLevel)
+function HaveWeMet:RegisterActivity(type, id, title, keystoneLevel, difficultyId)
   self.lastActivity = {
     ["Type"] = type,
     ["Id"] = id,
     ["Title"] = title,
     ["KeystoneLevel"] = keystoneLevel,
+    ["DifficultyId"] = difficultyId,
   }
 
   return self.lastActivity
@@ -89,10 +91,15 @@ function HaveWeMet:AddActivity(guid, activity, additionalInfo)
   local lastActivityId = #Dragtheron_WelcomeBack.KnownCharacters[guid].Activities
   local lastActivity = Dragtheron_WelcomeBack.KnownCharacters[guid].Activities[lastActivityId]
 
+  -- TODO: New Activity if older than a treshold
+  -- e.g. if one only plays one instance-difficulty combination (mythic raid only),
+  -- then all those events will be combined.
+
   if not lastActivity
     or lastActivity.Activity.Type ~= activity.Type
     or lastActivity.Activity.Id ~= activity.Id
     or lastActivity.Activity.KeystoneLevel ~= activity.KeystoneLevel
+    or lastActivity.Activity.DifficultyId ~= activity.DifficultyId
   then
     Dragtheron_WelcomeBack.KnownCharacters[guid].DanglingActivity = {
       ["Time"] = GetServerTime(),
@@ -131,7 +138,8 @@ function HaveWeMet:RegisterCharacter(character)
 end
 
 function HaveWeMet:IsInGroup(character)
-  return Dragtheron_WelcomeBack.LastGroup[character.guid]
+  local playerGUID = UnitGUID("player")
+  return character.guid == playerGUID or Dragtheron_WelcomeBack.LastGroup[character.guid]
 end
 
 function HaveWeMet:AddToGroup(character)
@@ -159,7 +167,7 @@ function HaveWeMet:CheckCharacter(character)
     local dateString = date("%c", knownCharacter.FirstContact)
     printColored(
       format(
-        "Already played with character %s from realm %s.",
+        "Already played with %s from %s.",
         character.name, character.realm
       ),
       color.GREEN
@@ -198,6 +206,7 @@ function HaveWeMet:OnEvent(event, ...)
   end
 
   if event == "ENCOUNTER_END" then
+    HaveWeMet.OnInstanceUpdate()
     if GetServerTime() - HaveWeMet.EncounterStart > 20 then
       local encounterId, encounterName, difficultyId, _, success = ...
       return HaveWeMet:OnEncounterEnd(encounterId, encounterName, difficultyId, success)
@@ -323,13 +332,11 @@ function HaveWeMet.OnInstanceUpdate()
      title = format("+%d %s", keystoneLevel, name)
   end
 
-  local activity = HaveWeMet:RegisterActivity("Instance", instanceId, title, keystoneLevel)
-
+  local activity = HaveWeMet:RegisterActivity("Instance", instanceId, title, keystoneLevel, difficultyId)
 
   if activity == false then
     return
   end
-
 
   local additionalInfo = {
     ["Instance"] = {
@@ -421,13 +428,11 @@ function HaveWeMet:LFGApplicantTooltip()
   end
 end
 
-HaveWeMet.frame = CreateFrame("Frame")
 HaveWeMet.frame:RegisterEvent("GROUP_ROSTER_UPDATE")
 HaveWeMet.frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 HaveWeMet.frame:RegisterEvent("VARIABLES_LOADED")
 HaveWeMet.frame:RegisterEvent("ENCOUNTER_START")
 HaveWeMet.frame:RegisterEvent("ENCOUNTER_END")
-
 HaveWeMet.frame:RegisterEvent("UPDATE_INSTANCE_INFO")
 HaveWeMet.frame:RegisterEvent("PLAYER_DIFFICULTY_CHANGED")
 HaveWeMet.frame:RegisterEvent("INSTANCE_GROUP_SIZE_CHANGED")

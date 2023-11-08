@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.3] - 2023-11-08
+
+Bumped to interface version 10.2.0
+
+## [1.0.2] - 2023-09-06
+
+Bumped to interface version 10.1.7
+
 ## [1.0.1] - 2023-07-29
 
 ### Fixed
