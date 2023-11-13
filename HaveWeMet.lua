@@ -1,3 +1,5 @@
+local addonName, addon = ...
+
 local DIFFICULTY_CHALLENGE_MODE = 8;
 local locale = GetLocale()
 
@@ -42,7 +44,7 @@ function HaveWeMet:CheckCharacters()
   local numGroupMembers = GetNumGroupMembers()
 
   if IsInRaid() then
-    for i = 1, numGroupMembers do
+    for i = 1, 40 do
       table.insert(units, "raid" .. i)
     end
   else
@@ -88,6 +90,10 @@ function HaveWeMet:IsKnownCharacter(character)
 end
 
 function HaveWeMet:AddActivity(guid, activity, additionalInfo)
+  if not Dragtheron_WelcomeBack.KnownCharacters[guid] then
+    return HaveWeMet:CheckCharacters()
+  end
+
   local lastActivityId = #Dragtheron_WelcomeBack.KnownCharacters[guid].Activities
   local lastActivity = Dragtheron_WelcomeBack.KnownCharacters[guid].Activities[lastActivityId]
 
@@ -213,6 +219,14 @@ function HaveWeMet:OnEvent(event, ...)
     end
   end
 
+  if event == "CHALLENGE_MODE_COMPLETED" then
+    print("Challange Mode completed.")
+  end
+
+  if event == "SCENARIO_COMPLETED" then
+    print("Scenario completed.")
+  end
+
   if not self.loaded then
     return
   end
@@ -243,11 +257,102 @@ local function addColoredLine(tooltip, text, color)
   tooltip:AddLine(text, rgb.r, rgb.g, rgb.b)
 end
 
-local function getDateString(time)
+function HaveWeMet.GetDateString(time)
   return date("%c", time)
 end
 
-function HaveWeMet.AddActivityLine(tooltip, activity)
+function HaveWeMet.GetKeystoneDetailsString(activity)
+  local expectedEncounters = addon.KeystoneEncounters[activity.Activity.Id]
+  local outputString = ""
+
+  local checkIcon = "|A:UI-QuestTracker-Tracker-Check:16:16|a"
+  local failIcon = "|A:UI-QuestTracker-Objective-Fail:16:16|a"
+  local nubIcon = "|A:UI-QuestTracker-Objective-Nub:16:16|a"
+
+  for _, encounterId in ipairs(expectedEncounters) do
+    local encounterCompleted = false
+    local encounterTried = false
+
+    for _, encounter in ipairs(activity.Encounters) do
+      if tonumber(encounter.Id) == encounterId then
+        encounterTried = true
+
+        if encounter.Success then
+          encounterCompleted = true
+        end
+      end
+    end
+
+    if encounterCompleted then
+      outputString = outputString .. checkIcon
+    elseif encounterTried then
+      outputString = outputString .. failIcon
+    else
+      outputString = outputString .. nubIcon
+    end
+  end
+
+  return outputString
+end
+
+function HaveWeMet.GetRaidDetailsString(activity)
+  local expectedEncounters = addon.RaidEncounters[activity.Activity.Id]
+  local outputString = ""
+
+  local checkIcon = "|A:UI-QuestTracker-Tracker-Check:16:16|a"
+  local failIcon = "|A:UI-QuestTracker-Objective-Fail:16:16|a"
+  local nubIcon = "|A:UI-QuestTracker-Objective-Nub:16:16|a"
+
+  for _, encounterId in ipairs(expectedEncounters) do
+    local encounterCompleted = false
+    local encounterTried = false
+
+    for _, encounter in ipairs(activity.Encounters) do
+      if tonumber(encounter.Id) == encounterId then
+        encounterTried = true
+
+        if encounter.Success == 1 then
+          encounterCompleted = true
+        end
+      end
+    end
+
+    if encounterCompleted then
+      outputString = outputString .. checkIcon
+    elseif encounterTried then
+      outputString = outputString .. failIcon
+    else
+      outputString = outputString .. nubIcon
+    end
+  end
+
+  return outputString
+end
+
+function HaveWeMet.GetKillsWipesCountString(kills, wipes)
+  local deathIcon = "|A:poi-graveyard-neutral:16:12|a"
+  local defeatIcon = "|A:UI-QuestTracker-Tracker-Check:16:16|a"
+
+  if wipes > 0 or kills > 0 then
+    local encounterInfoString = ""
+
+    if wipes > 0 then
+      encounterInfoString = encounterInfoString .. format(" %s %d ", deathIcon, wipes)
+    end
+
+    if kills > 1 then
+      encounterInfoString = encounterInfoString .. format(" %s %d ", defeatIcon, kills)
+    elseif kills > 0 then
+      encounterInfoString = encounterInfoString .. format(" %s ", defeatIcon)
+    end
+
+    return encounterInfoString
+  end
+end
+
+function HaveWeMet.GetGenericDetailsString(activity)
+  local deathIcon = "|A:poi-graveyard-neutral:16:12|a"
+  local defeatIcon = "|A:UI-QuestTracker-Tracker-Check:16:16|a"
   local wipes = 0
   local kills = 0
 
@@ -259,22 +364,30 @@ function HaveWeMet.AddActivityLine(tooltip, activity)
     end
   end
 
-  if wipes > 0 or kills > 0 then
-    local encounterInfoString
-    if wipes > 0 and kills > 0 then
-      encounterInfoString = format("|cff00ff00%d Kills|r, |cffff0000%d Wipes|r", kills, wipes)
-    elseif wipes > 0 then
-      encounterInfoString = format("|cffff0000%d Wipes|r", wipes)
-    else
-      encounterInfoString = format("|cff00ff00%d Kills|r", kills)
-    end
+  return HaveWeMet.GetKillsWipesCountString(kills, wipes)
+end
 
-    local activityTitle = HaveWeMet.GetActivityTitle(activity.Activity)
-
-    local leftText = format("%s (%s)", activityTitle, encounterInfoString)
-    local rightText = IsLeftShiftKeyDown() and getDateString(activity.Time) or nil
-    addColoredDoubleLine(tooltip, leftText, rightText, HIGHLIGHT_FONT_COLOR, HIGHLIGHT_FONT_COLOR)
+function HaveWeMet.GetDetailsString(activity)
+  if activity.Activity.KeystoneLevel then
+    return HaveWeMet.GetKeystoneDetailsString(activity)
+  elseif addon.RaidEncounters[activity.Activity.Id] then
+    return HaveWeMet.GetRaidDetailsString(activity)
+  else
+    return HaveWeMet.GetGenericDetailsString(activity)
   end
+end
+
+function HaveWeMet.AddActivityLine(tooltip, activity)
+  local activityDetails
+  local activityTitle = HaveWeMet.GetActivityTitle(activity.Activity)
+
+  if IsLeftShiftKeyDown() then
+    activityDetails = HaveWeMet.GetDateString(activity.Time)
+  else
+    activityDetails = HaveWeMet.GetDetailsString(activity)
+  end
+
+  addColoredDoubleLine(tooltip, activityTitle, activityDetails, HIGHLIGHT_FONT_COLOR, HIGHLIGHT_FONT_COLOR)
 end
 
 function HaveWeMet.AddTooltipInfo(character, tooltip)
@@ -306,16 +419,15 @@ end
 
 function HaveWeMet.OnUnitTooltip(tooltip, data)
   local playerGUID = UnitGUID("player")
+  local knownCharacter = Dragtheron_WelcomeBack.KnownCharacters[data.guid]
 
   if playerGUID == data.guid then
-    return
+    -- knownCharacter = Dragtheron_WelcomeBack.KnownCharacters["Player-3691-0A12FB19"]
   end
 
   if not data.guid:find("^Player%-%d+") then
     return
   end
-
-  local knownCharacter = Dragtheron_WelcomeBack.KnownCharacters[data.guid]
   HaveWeMet.AddTooltipInfo(knownCharacter, tooltip)
 end
 
@@ -359,8 +471,11 @@ function HaveWeMet:OnEncounterEnd(encounterId, encounterName, difficultyId, succ
     ["Success"] = tonumber(success),
   }
 
+  Dragtheron_WelcomeBack.PreviousGroup = {}
+
   for guid, _ in pairs(Dragtheron_WelcomeBack.LastGroup) do
     self:AddEncounter(guid, encounter)
+    Dragtheron_WelcomeBack.PreviousGroup[guid] = true
   end
 end
 
@@ -464,6 +579,14 @@ function HaveWeMet.GetActivityTitle(activity)
   return format("%s %s", difficultyName, instanceName)
 end
 
+function HaveWeMet.GetEncounterTitle(encounter)
+  if encounter.Name then
+    return encounter.Name
+  end
+
+  return HaveWeMet.GetName("encounter", encounter.Id)
+end
+
 HaveWeMet.frame:RegisterEvent("GROUP_ROSTER_UPDATE")
 HaveWeMet.frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 HaveWeMet.frame:RegisterEvent("VARIABLES_LOADED")
@@ -478,6 +601,9 @@ HaveWeMet.frame:RegisterEvent("PARTY_MEMBER_ENABLE")
 HaveWeMet.frame:RegisterEvent("PARTY_MEMBER_DISABLE")
 HaveWeMet.frame:RegisterEvent("GUILD_PARTY_STATE_UPDATED")
 
+HaveWeMet.frame:RegisterEvent("CHALLENGE_MODE_COMPLETED")
+HaveWeMet.frame:RegisterEvent("SCENARIO_COMPLETED")
+
 HaveWeMet.frame:SetScript("OnEvent", HaveWeMet.OnEvent)
 
 hooksecurefunc("Scenario_ChallengeMode_ShowBlock", HaveWeMet.OnInstanceUpdate)
@@ -485,3 +611,5 @@ hooksecurefunc("LFGListSearchEntry_OnEnter", HaveWeMet.LFGActivityTooltip)
 hooksecurefunc("LFGListApplicantMember_OnEnter", HaveWeMet.LFGApplicantTooltip)
 
 LFGListFrame.ApplicationViewer.UnempoweredCover:EnableMouse(false)
+
+addon.HaveWeMet = HaveWeMet

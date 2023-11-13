@@ -14,3 +14,10 @@ Welcome Back automatically keeps track of players in your group or raid and info
 - Tooltips are also available on the LFG tool: Check if you played before with a group leader
   (while applying for a group) or any applicants (while forming a group).
 - Enables applicants list interactions (show tooltips) while forming a group, where you are not the leader.
+
+## Overview Panel
+
+- Show any player the addon has seen with you in an instance group.
+- Add notes to players you played with.
+- Get an detailed overview over every activity.
+- Search for an character.

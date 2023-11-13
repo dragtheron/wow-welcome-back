@@ -1,4 +1,6 @@
 package-as: WelcomeBack
 
+manual-changelog: CHANGELOG.md
+
 ignore:
   - .vscode
