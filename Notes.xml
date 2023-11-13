@@ -1,0 +1,105 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.blizzard.com/wow/ui/ ..\..\FrameXML\UI.xsd">
+    <Script file="Notes.lua"/>
+    <Button name="WelcomeBack_NotesCategoryTemplate" mixin="WelcomeBack_NotesCategoryMixin" virtual="true">
+        <Size y="25"/>
+        <Layers>
+            <Layer level="OVERLAY">
+                <FontString parentKey="Label" inherits="GameFontNormal_NoShadow">
+                    <Size y="10"/>
+                    <Anchors>
+                        <Anchor point="LEFT" x="10" y="2"/>
+                    </Anchors>
+                </FontString>
+            </Layer>
+            <Layer level="BACKGROUND">
+                <Texture parentKey="LeftPiece" atlas="Professions-recipe-header-left" useAtlasSize="true">
+                    <Anchors>
+                        <Anchor point="LEFT" y="2"/>
+                    </Anchors>
+                </Texture>
+                <Texture parentKey="RightPiece" atlas="Professions-recipe-header-right" useAtlasSize="true">
+                    <Anchors>
+                        <Anchor point="RIGHT" y="2"/>
+                    </Anchors>
+                </Texture>
+                <Texture parentKey="CenterPiece" atlas="Professions-recipe-header-middle" useAtlasSize="false">
+                    <Anchors>
+                        <Anchor point="TOPLEFT" relativeKey="$parent.LeftPiece" relativePoint="TOPRIGHT"/>
+                        <Anchor point="BOTTOMRIGHT" relativeKey="$parent.RightPiece" relativePoint="BOTTOMLEFT"/>
+                    </Anchors>
+                </Texture>
+            </Layer>
+            <Layer level="ARTWORK">
+                <Texture parentKey="CollapseIcon">
+                    <Anchors>
+                        <Anchor point="RIGHT" x="-10" y="2"/>
+                    </Anchors>
+                </Texture>
+            </Layer>
+            <Layer level="HIGHLIGHT">
+                <Texture parentKey="CollapseIconAlphaAdd" alphaMode="ADD">
+                    <Anchors>
+                        <Anchor point="CENTER" relativeKey="$parent.CollapseIcon"/>
+                    </Anchors>
+                </Texture>
+            </Layer>
+        </Layers>
+		<Scripts>
+			<OnEnter method="OnEnter"/>
+			<OnLeave method="OnLeave"/>
+		</Scripts>
+    </Button>
+    <Button name="WelcomeBack_NotesCharacterTemplate" mixin="WelcomeBack_NotesCharacterMixin" virtual="true">
+        <Layers>
+            <Layer level="OVERLAY">
+                <FontString parentKey="Label" inherits="GameFontHighlight_NoShadow" justifyH="LEFT">
+                    <Size y="12"/>
+                </FontString>
+            </Layer>
+            <Layer level="OVERLAY" textureSubLevel="2">
+                <Texture parentKey="SelectedOverlay" atlas="Professions_Recipe_Active" useAtlasSize="true" hidden="true">
+                    <Anchors>
+                        <Anchor point="CENTER" x="0" y="-1"/>
+                    </Anchors>
+                </Texture>
+            </Layer>
+            <Layer level="HIGHLIGHT">
+                <Texture parentKey="HighlightOverlay" atlas="Professions_Recipe_Hover" useAtlasSize="true" alpha="0.5">
+                    <Anchors>
+                        <Anchor point="CENTER" x="0" y="-1"/>
+                    </Anchors>
+                </Texture>
+            </Layer>
+        </Layers>
+		<Scripts>
+			<OnEnter method="OnEnter"/>
+			<OnLeave method="OnLeave"/>
+		</Scripts>
+    </Button>
+    <Button name="WelcomeBack_NotesActivityTemplate" mixin="WelcomeBack_NotesActivityMixin" inherits="WelcomeBack_NotesCategoryTemplate" virtual="true">
+        <Layers>
+            <Layer level="OVERLAY">
+                <FontString parentKey="Progress" inherits="GameFontHighlight_NoShadow" justifyH="RIGHT">
+                    <Size y="12"/>
+                    <Anchors>
+                        <Anchor point="RIGHT" x="-26"/>
+                    </Anchors>
+                </FontString>
+            </Layer>
+        </Layers>
+    </Button>
+    <Button name="WelcomeBack_NotesActivityCategoryTemplate" mixin="WelcomeBack_NotesActivityCategoryMixin" inherits="WelcomeBack_NotesCategoryTemplate" virtual="true"/>
+
+    <Button name="WelcomeBack_NotesEncounterTemplate" mixin="WelcomeBack_NotesEncounterMixin" inherits="WelcomeBack_NotesCharacterTemplate" virtual="true">
+        <Layers>
+            <Layer level="OVERLAY">
+                <FontString parentKey="Progress" inherits="GameFontHighlight_NoShadow" justifyH="RIGHT">
+                    <Size y="12"/>
+                    <Anchors>
+                        <Anchor point="RIGHT" x="-26"/>
+                    </Anchors>
+                </FontString>
+            </Layer>
+        </Layers>
+    </Button>
+</Ui>
