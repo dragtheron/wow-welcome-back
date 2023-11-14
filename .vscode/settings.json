@@ -101,6 +101,7 @@
     "_G",
     "string",
     "Add",
-    "AddonCompartmentFrame"
+    "AddonCompartmentFrame",
+    "DISABLED_FONT_COLOR"
   ]
 }

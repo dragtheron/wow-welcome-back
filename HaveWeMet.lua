@@ -83,18 +83,28 @@ function HaveWeMet:CheckCharacters()
   for _, character in ipairs(characters) do
     self:AddToGroup(character)
   end
+
+  self:AnnounceUpdate()
 end
 
 function HaveWeMet:IsKnownCharacter(character)
   return Dragtheron_WelcomeBack.KnownCharacters[character.guid]
 end
 
+function HaveWeMet.IsEqualActivity(a, b)
+  if not a or not b then
+    return false
+  end
+
+  return a.Type == b.Type
+    and a.Id == b.Id
+    and a.KeystoneLevel == b.KeystoneLevel
+    and a.DifficultyId == b.DifficultyId
+end
+
 function HaveWeMet:AddActivity(guid, activity, additionalInfo)
   if not Dragtheron_WelcomeBack.KnownCharacters[guid] then
-
-    self:AnnounceUpdate()
-
-    return HaveWeMet:CheckCharacters()
+    return
   end
 
   local lastActivityId = #Dragtheron_WelcomeBack.KnownCharacters[guid].Activities
@@ -104,12 +114,7 @@ function HaveWeMet:AddActivity(guid, activity, additionalInfo)
   -- e.g. if one only plays one instance-difficulty combination (mythic raid only),
   -- then all those events will be combined.
 
-  if not lastActivity
-    or lastActivity.Activity.Type ~= activity.Type
-    or lastActivity.Activity.Id ~= activity.Id
-    or lastActivity.Activity.KeystoneLevel ~= activity.KeystoneLevel
-    or lastActivity.Activity.DifficultyId ~= activity.DifficultyId
-  then
+  if not lastActivity or not HaveWeMet.IsEqualActivity(lastActivity.Activity, activity) then
     Dragtheron_WelcomeBack.KnownCharacters[guid].DanglingActivity = {
       ["Time"] = GetServerTime(),
       ["Activity"] = activity,
@@ -149,8 +154,7 @@ function HaveWeMet:RegisterCharacter(character)
 end
 
 function HaveWeMet:IsInGroup(character)
-  local playerGUID = UnitGUID("player")
-  return character.guid == playerGUID or Dragtheron_WelcomeBack.LastGroup[character.guid]
+  return Dragtheron_WelcomeBack.LastGroup[character.guid]
 end
 
 function HaveWeMet:AddToGroup(character)
@@ -212,7 +216,6 @@ function HaveWeMet:OnEvent(event, ...)
     end
 
     HaveWeMet:CleanActivities()
-
     return
   end
 
@@ -232,7 +235,11 @@ function HaveWeMet:OnEvent(event, ...)
     return
   end
 
-  C_Timer.After(3, function()
+  if self.checkCharactersTimer then
+    self.checkCharactersTimer:Cancel()
+  end
+
+  self.checkCharactersTimer = C_Timer.NewTimer(3, function()
     HaveWeMet:CheckCharacters()
     HaveWeMet.OnInstanceUpdate()
   end)
@@ -597,7 +604,6 @@ HaveWeMet.frame:RegisterEvent("ENCOUNTER_END")
 HaveWeMet.frame:RegisterEvent("UPDATE_INSTANCE_INFO")
 HaveWeMet.frame:RegisterEvent("PLAYER_DIFFICULTY_CHANGED")
 HaveWeMet.frame:RegisterEvent("INSTANCE_GROUP_SIZE_CHANGED")
-HaveWeMet.frame:RegisterEvent("GROUP_ROSTER_UPDATE")
 HaveWeMet.frame:RegisterEvent("PLAYER_GUILD_UPDATE")
 HaveWeMet.frame:RegisterEvent("PARTY_MEMBER_ENABLE")
 HaveWeMet.frame:RegisterEvent("PARTY_MEMBER_DISABLE")

@@ -93,35 +93,62 @@ local function sortCategoryData(a, b)
 end
 
 local function addTreeDataForCategory(categoryInfo, node)
+    if next(categoryInfo.characters) == nil then
+        return
+    end
+
+
     local categoryNode = node:Insert({ categoryInfo = categoryInfo, group = categoryInfo.group })
     local affectChildren = false
     local skipSort = false
     -- categoryNode:SetSortComparator(sortCategoryData, affectChildren, skipSort)
 
-    for _, characterInfo in ipairs(categoryInfo.characters) do
-        categoryNode:Insert({ characterInfo = characterInfo, order = 0 })
+    if categoryInfo.collapsed then
+        categoryNode:SetCollapsed(true)
     end
+
+    categoryNode:Insert({topPadding=true, order = -1});
+
+    for _, characterInfo in ipairs(categoryInfo.characters) do
+        categoryNode:Insert({
+            characterInfo = characterInfo,
+            order = 0,
+            highlightKnown = categoryInfo.highlightKnown,
+            highlightCurrentGroupMembers = categoryInfo.highlightCurrentGroupMembers,
+        })
+
+        if characterInfo.collapsed then
+            categoryNode:SetCollapsed(true)
+        end
+    end
+
+    categoryNode:Insert({topPadding=true, order = -1});
 
     return categoryNode
 end
 
 local function addTreeDataForActivityCategory(categoryInfo, node)
+    if #categoryInfo.activities == 0 then
+        return
+    end
+
     local categoryNode = node:Insert({ categoryInfo = categoryInfo, group = categoryInfo.group })
     local affectChildren = false
     local skipSort = false
     -- categoryNode:SetSortComparator(sortCategoryData, affectChildren, skipSort)
 
+    if categoryInfo.collapsed then
+        categoryNode:SetCollapsed(true)
+    end
+
+    categoryNode:Insert({topPadding=true, order = -1});
+
     for _, activityInfo in ipairs(categoryInfo.activities) do
-        local activityNode = categoryNode:Insert({ activityInfo = activityInfo, order = 0 })activityNode:SetSortComparator(sortEncounterData, affectChildren, skipSort)
+        local activityNode = categoryNode:Insert({ activityInfo = activityInfo, order = 0 })
+        activityNode:SetSortComparator(sortEncounterData, affectChildren, skipSort)
 
-        local uniqueEncounters = {}
-
-        local expectedEncounters
-
-        if activityInfo.KeystoneLevel then
-            expectedEncounters = addon.KeystoneEncounters[activityInfo.Activity.Id]
-        elseif activityInfo.AdditionalInfo.Instance.Type == "raid" then
-            expectedEncounters = addon.RaidEncounters[activityInfo.Activity.Id]
+        if activityInfo.collapsed then
+            activityNode:SetCollapsed(true)
         end
 
         if expectedEncounters then
@@ -157,6 +184,8 @@ local function addTreeDataForActivityCategory(categoryInfo, node)
             activityNode:Insert({ encounterInfo = encounterInfo, order = 0 })
         end
     end
+
+    categoryNode:Insert({topPadding=true, order = -1});
 
     return categoryNode
 end
@@ -196,6 +225,11 @@ function WelcomeBack_NotesCharacterMixin:Init(node)
     local elementData = node:GetData()
     local characterName = self:GetLabelText(elementData.characterInfo)
     self.Label:SetText(characterName)
+
+    self.highlight = (elementData.characterInfo.Known and elementData.highlightKnown)
+        or (elementData.characterInfo.InGroup and elementData.highlightCurrentGroupMembers)
+
+    self:SetLabelFontColors(self.highlight and PROFESSION_RECIPE_COLOR or DISABLED_FONT_COLOR)
 end
 
 function WelcomeBack_NotesCharacterMixin:SetSelected(selected)
@@ -221,7 +255,7 @@ function WelcomeBack_NotesCharacterMixin:OnEnter()
 end
 
 function WelcomeBack_NotesCharacterMixin:OnLeave()
-    self:SetLabelFontColors(PROFESSION_RECIPE_COLOR)
+    self:SetLabelFontColors(self.highlight and PROFESSION_RECIPE_COLOR or DISABLED_FONT_COLOR)
     GameTooltip:Hide()
 end
 
@@ -448,21 +482,22 @@ characterList.selectionBehavior:RegisterCallback(
 mainFrame.characterList = characterList
 
 local characterDetails = CreateFrame("Frame", "$parentCharacterDetails", mainFrame)
-characterDetails:SetSize(655, 200)
+characterDetails:SetHeight(200)
 characterDetails:SetPoint("TOPLEFT", characterList, "TOPRIGHT", 2, 0)
+characterDetails:SetPoint("RIGHT", -5, 0)
 
 characterDetails.Background = characterDetails:CreateTexture(nil, "BACKGROUND")
 characterDetails.Background:SetAtlas("Professions-Recipe-Background", false)
 characterDetails.Background:SetAllPoints()
 characterDetails.NineSlice = CreateFrame("Frame", nil, characterDetails, "NineSlicePanelTemplate")
 characterDetails.NineSlice.layoutType = "InsetFrameTemplate"
-characterDetails.NineSlice:SetPoint("TOPLEFT", characterDetails.Background)
-characterDetails.NineSlice:SetPoint("BOTTOMRIGHT", characterDetails.Background)
+characterDetails.NineSlice:SetAllPoints()
 characterDetails.NineSlice:OnLoad()
 
 local noteFrame = CreateFrame("Frame", nil, characterDetails)
 noteFrame:SetSize(300, 144)
 noteFrame:SetPoint("RIGHT", -8, 0)
+noteFrame:SetShown(false)
 noteFrame.Border = noteFrame:CreateTexture(nil, "ARTWORK")
 noteFrame.Border:SetAtlas("CraftingOrders-NoteFrameNarrow", true)
 noteFrame.Border:SetPoint("CENTER", 0, -17)
@@ -499,6 +534,7 @@ summaryFrame.CharacterRealm:SetPoint("TOPLEFT", summaryFrame.CharacterName, "BOT
 summaryFrame.ActivitiesCounter = summaryFrame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
 summaryFrame.ActivitiesCounter:SetHeight(20)
 summaryFrame.ActivitiesCounter:SetPoint("TOPLEFT", summaryFrame.CharacterRealm, "BOTTOMLEFT", 0, -8)
+summaryFrame.ActivitiesCounter:SetHeight(20)
 
 characterDetails.Summary = summaryFrame
 
@@ -525,7 +561,7 @@ mainFrame.CharacterDetails = characterDetails
 
 local activitiesFrame = CreateFrame("Frame", "$parentCharacterActivities", mainFrame)
 activitiesFrame:SetPoint("TOPLEFT", characterDetails, "BOTTOMLEFT", 0, -2)
-activitiesFrame:SetPoint("BOTTOMRIGHT", 0, 5)
+activitiesFrame:SetPoint("BOTTOMRIGHT", -5, 5)
 
 activitiesFrame.Background = activitiesFrame:CreateTexture(nil, "BACKGROUND")
 activitiesFrame.Background:SetAtlas("Professions-Recipe-Background", false)
@@ -641,6 +677,11 @@ function Notes:Init()
     ScrollUtil.InitScrollBoxListWithScrollBar(characterList.ScrollBox, characterList.ScrollBar, characterListView)
     characterList.ScrollBox:SetDataProvider(dataProvider, ScrollBoxConstants.RetainScrollPosition)
     characterList.NoResultsText:SetShown(dataProvider:IsEmpty())
+
+    if self.selectedCharacterInfo then
+        self.frame.CharacterDetails:Refresh()
+        self.frame.Activities:Refresh()
+    end
 end
 
 function Notes:Refresh()
@@ -664,7 +705,8 @@ end
 function Notes:MatchesFilter(characterInfo)
     for filterType, filter in pairs(Notes.filters) do
         if filterType == Filter.CharacterName then
-            local characterName = string.lower(self.GetCharacterName(characterInfo))
+            local forceRealm = true
+            local characterName = string.lower(self.GetCharacterName(characterInfo, forceRealm))
             if not string.match(characterName, ".*" .. string.lower(filter) .. ".*") then
                 return false
             end
@@ -680,33 +722,47 @@ function Notes:GenerateCharacterDataProvider()
     local previousGroupCharacterInfo = {}
 
     local lastGroupCategoryInfo = {
-        name = "Current Group",
+        name = "Current Activity",
         uiOrder = 0,
         group = Group.LastGroup,
+        highlightKnown = true,
     }
 
     local previousGroupCategoryInfo = {
-        name = "Previous Characters",
+        name = "Last Activity",
         uiOrder = 1,
         group = Group.PreviousGroup,
+        highlightCurrentGroupMembers = true,
     }
 
     local knownCharactersCategoryInfo = {
         name = "Known Characters",
         uiOrder = 2,
         group = Group.KnownCharacters,
-        collapsed = true,
+        highlightCurrentGroupMembers = true,
     }
 
-    for characterId, character in pairs(Dragtheron_WelcomeBack.KnownCharacters) do
+    for characterId, characterData in pairs(Dragtheron_WelcomeBack.KnownCharacters) do
         local character = {
-            Name = character.CharacterInfo.Name,
-            Realm = character.CharacterInfo.Realm,
+            Name = characterData.CharacterInfo.Name,
+            Realm = characterData.CharacterInfo.Realm,
             Id = characterId,
         }
 
+        if Dragtheron_WelcomeBack.LastGroup[characterId] then
+            character.InGroup = true
+        end
+
+        local isKnownCharacter = #Dragtheron_WelcomeBack.KnownCharacters[character.Id].Activities > 0
+
+        if isKnownCharacter then
+            character.Known = true
+        end
+
         if self:MatchesFilter(character) then
-            table.insert(characterInfo, character)
+            if #characterData.Activities > 0 then
+                table.insert(characterInfo, character)
+            end
 
             if Dragtheron_WelcomeBack.LastGroup[characterId] then
                 table.insert(lastGroupCharacterInfo, character)
@@ -725,7 +781,7 @@ function Notes:GenerateCharacterDataProvider()
     local categories = {
         lastGroupCategoryInfo,
         previousGroupCategoryInfo,
-         knownCharactersCategoryInfo,
+        knownCharactersCategoryInfo,
     }
 
     local dataProvider = CreateTreeDataProvider()
@@ -775,10 +831,22 @@ function Notes:GenerateActivitiesDataProvider()
         local activityInfo = activity
 
         if activity.AdditionalInfo.Instance.Type == "raid" then
+            if #raidActivities > 0 then
+                activityInfo.collapsed = true
+            end
+
             table.insert(raidActivities, activityInfo)
         elseif activity.Activity.KeystoneLevel then
+            if #keystoneActivities > 0 then
+                activityInfo.collapsed = true
+            end
+
             table.insert(keystoneActivities, activityInfo)
         else
+            if #genericActivities > 0 then
+                activityInfo.collapsed = true
+            end
+
             table.insert(genericActivities, activity)
         end
     end
@@ -811,7 +879,11 @@ function Notes:SetSearchText(text)
     self:SetCharacterNameFilter(text)
 end
 
-function Notes.GetCharacterName(characterInfo)
+function Notes.GetCharacterName(characterInfo, forceRealm)
+    if not forceRealm and characterInfo.Realm == GetNormalizedRealmName() then
+        return characterInfo.Name
+    end
+
     return format("%s-%s", characterInfo.Name, characterInfo.Realm)
 end
 
@@ -835,3 +907,4 @@ Notes.frame:SetScript("OnEvent", Notes.OnEvent)
 
 EventRegistry:RegisterCallback(addonName .. ".Notes.OnCharacterSelected", Notes.OnCharacterSelected, Notes)
 EventRegistry:RegisterCallback(addonName .. ".HaveWeMet.Update", Notes.Init, Notes)
+EventRegistry:RegisterCallback(addonName .. ".HaveWeMet.ActivityUpdate", Notes.OnActivityUpdate, Notes)
