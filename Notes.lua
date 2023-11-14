@@ -510,11 +510,15 @@ function characterDetails:Refresh()
     local characterData = Dragtheron_WelcomeBack.KnownCharacters[characterInfo.Id]
     local activities = characterData.Activities
 
-    self.Summary.ActivitiesCounter:SetText(format("Activities played with this character: %d", #activities))
+    if #activities > 0 then
+        self.Summary.ActivitiesCounter:SetText(format("Activities played with this character: %d", #activities))
+    else
+        self.Summary.ActivitiesCounter:SetText("|cff888888Character is not known yet.|r")
+    end
 
     self.Note.EditBox:SetDefaultTextEnabled(true)
     self.Note.EditBox:SetText(characterData.Note or "")
-    self.Note.EditBox:SetEnabled(true)
+    self.Note:SetShown(#activities > 0)
 end
 
 mainFrame.CharacterDetails = characterDetails
@@ -540,6 +544,11 @@ activitiesFrame.ScrollBar = CreateFrame("EventFrame", nil, activitiesFrame, "Min
 activitiesFrame.ScrollBar:SetPoint("TOPLEFT", activitiesFrame.ScrollBox, "TOPRIGHT", 0, -7)
 activitiesFrame.ScrollBar:SetPoint("BOTTOMLEFT", activitiesFrame.ScrollBox, "BOTTOMRIGHT", 0, 0)
 activitiesFrame.ScrollBar:OnLoad()
+
+activitiesFrame.NoResultsText = activitiesFrame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+activitiesFrame.NoResultsText:SetText("No activites found.")
+activitiesFrame.NoResultsText:SetSize(200, 0)
+activitiesFrame.NoResultsText:SetPoint("TOP", 0, -60)
 
 local activitiesListView = CreateScrollBoxListTreeListView(10, 5, 5, 0, 5, 1)
 
@@ -613,9 +622,14 @@ activitiesListView:SetElementExtentCalculator(function(_, node)
 end)
 
 function activitiesFrame:Refresh()
+    local characterInfo = Notes.selectedCharacterInfo
+    local characterData = Dragtheron_WelcomeBack.KnownCharacters[characterInfo.Id]
+    local activities = characterData.Activities
+
     local dataProvider = Notes:GenerateActivitiesDataProvider()
     ScrollUtil.InitScrollBoxListWithScrollBar(self.ScrollBox, self.ScrollBar, self.view)
     self.ScrollBox:SetDataProvider(dataProvider, ScrollBoxConstants.RetainScrollPosition)
+    self.NoResultsText:SetShown(#activities == 0)
 end
 
 activitiesFrame.view = activitiesListView
