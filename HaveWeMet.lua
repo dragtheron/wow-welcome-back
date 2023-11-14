@@ -412,6 +412,11 @@ function HaveWeMet.AddTooltipInfo(character, tooltip)
     if moreActivites > 0 then
       addColoredLine(tooltip, format("(and %d more activites)", moreActivites), HIGHLIGHT_FONT_COLOR)
     end
+
+    if character.Note then
+      tooltip:AddLine(" ")
+      addColoredLine(tooltip, format("\"%s\"", character.Note), NORMAL_FONT_COLOR)
+    end
   else
     addColoredLine(tooltip, "Never played with this player.", GRAY_FONT_COLOR)
   end
