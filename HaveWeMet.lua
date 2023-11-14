@@ -36,6 +36,8 @@ function HaveWeMet:RegisterActivity(type, id, keystoneLevel, difficultyId)
     ["DifficultyId"] = difficultyId,
   }
 
+  EventRegistry:TriggerEvent(addonName .. ".HaveWeMet.ActivityUpdate")
+
   return self.lastActivity
 end
 
@@ -52,6 +54,8 @@ function HaveWeMet:CheckCharacters()
       table.insert(units, "party" .. i)
     end
   end
+
+  table.insert(units, "player")
 
   local characters = {}
 
@@ -139,6 +143,7 @@ function HaveWeMet:AddEncounter(guid, encounter)
     encounter)
 
   self:AnnounceUpdate()
+  EventRegistry:TriggerEvent(addonName .. ".HaveWeMet.ActivityUpdate")
 end
 
 function HaveWeMet:RegisterCharacter(character)
