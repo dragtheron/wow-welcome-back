@@ -6,13 +6,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
-## [1.2.0-beta0](https://git.tsno.de/dragtheron/wow-welcome-back/tags/1.2.0-beta0) - 2023-11-14
+## [1.2.0-beta1](https://git.tsno.de/dragtheron/wow-welcome-back/tags/1.2.0-beta1) - 2023-11-14
 
-<small>[Compare with 1.1.0](https://git.tsno.de/dragtheron/wow-welcome-back/compare/1.1.0...1.2.0-beta0)</small>
+<small>[Compare with 1.1.0](https://git.tsno.de/dragtheron/wow-welcome-back/compare/1.1.0...1.2.0-beta1)</small>
 
 ### Features
 
-- add notes ui ([4b4e244](https://git.tsno.de/dragtheron/wow-welcome-back/commit/4b4e24412698aeecb31a613c58d45fe7363c14c4) by Tobias Stettner).
+- add note to tooltip ([f9ba8da](https://git.tsno.de/dragtheron/wow-welcome-back/commit/f9ba8da5982f247fec65722645be91bc6415224c) by Tobias Stettner).
+- add notes ui ([8b9a8ed](https://git.tsno.de/dragtheron/wow-welcome-back/commit/8b9a8edaf0bf396c169b5313a0ae2291c9bdde03) by Tobias Stettner).
 
 ## [1.1.0](https://git.tsno.de/dragtheron/wow-welcome-back/tags/1.1.0) - 2023-11-09
 
