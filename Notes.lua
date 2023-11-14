@@ -337,6 +337,22 @@ mainFrame:SetTitle("Welcome Back: Notes")
 mainFrame:SetPortraitToUnit("player")
 mainFrame:SetPortraitToAsset("Interface\\ICONS\\achievement_guildperk_havegroup willtravel")
 
+local header = CreateFrame("Frame", "$parentHeader", mainFrame)
+header:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 64, -34)
+header:SetPoint("BOTTOMRIGHT", mainFrame, "TOPRIGHT", -28, -68)
+header.Label = header:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+header.Label:SetPoint("LEFT", 0, 0)
+header.Label:SetJustifyH("LEFT")
+header.Label:SetText("Loading...")
+header.Progress = header:CreateFontString(nil, "OVERLAY", "GameFontHighlight_NoShadow")
+header.Progress:SetHeight(header:GetHeight())
+header.Progress:SetWidth(200)
+header.Progress:SetPoint("RIGHT", 0, 0)
+header.Progress:SetJustifyH("RIGHT")
+header.Progress:SetText("...")
+
+mainFrame.Header = header
+
 local characterList = CreateFrame("Frame", "$parentCharacters", mainFrame)
 characterList:SetWidth(274)
 characterList:SetPoint("TOPLEFT", 5, -72)
@@ -879,6 +895,37 @@ end
 function Notes:SetCharacterNameFilter(text)
     self.filters[Filter.CharacterName] = text
     self:Init()
+end
+
+function Notes.OnActivityUpdate()
+    local lastActivity = addon.HaveWeMet.lastActivity
+    local activityName = addon.HaveWeMet.GetActivityTitle(lastActivity)
+
+    if lastActivity then
+        Notes.frame.Header.Label:SetText(format("Current Activity: |cffffffff%s|r", activityName))
+        Notes.frame.Header.Label:SetShown(true)
+
+        local defaultDetailsString = addon.HaveWeMet.GetDetailsString({
+            Activity = lastActivity,
+            Encounters = {},
+        })
+
+        Notes.frame.Header.Progress:SetText(defaultDetailsString)
+
+        local playerGUID = UnitGUID("player")
+        local playerProgress = Dragtheron_WelcomeBack.KnownCharacters[playerGUID]
+
+        if playerProgress then
+            local playerLastActivity = playerProgress.Activities[#playerProgress.Activities]
+
+            if addon.HaveWeMet.IsEqualActivity(playerLastActivity.Activity, lastActivity) then
+                local detailsString = addon.HaveWeMet.GetDetailsString(playerLastActivity)
+                Notes.frame.Header.Progress:SetText(detailsString)
+            end
+        end
+    else
+        Notes.frame.Header.Label:SetShown(false)
+    end
 end
 
 function Notes:SetSearchText(text)
