@@ -7,6 +7,7 @@ local HaveWeMet = CreateFromMixins(CallbackRegistryMixin)
 HaveWeMet.loaded = false
 HaveWeMet.lastActivity = nil
 HaveWeMet.EncounterStart = 0
+HaveWeMet.cache = {}
 DT_HWM = HaveWeMet
 HaveWeMet.frame = CreateFrame("Frame")
 
@@ -143,7 +144,6 @@ function HaveWeMet:AddEncounter(guid, encounter)
     encounter)
 
   self:AnnounceUpdate()
-  EventRegistry:TriggerEvent(addonName .. ".HaveWeMet.ActivityUpdate")
 end
 
 function HaveWeMet:RegisterCharacter(character)
@@ -231,8 +231,8 @@ function HaveWeMet:OnEvent(event, ...)
   if event == "ENCOUNTER_END" then
     HaveWeMet.OnInstanceUpdate()
     if GetServerTime() - HaveWeMet.EncounterStart > 20 then
-      local encounterId, _, difficultyId, _, _ = ...
-      return HaveWeMet:OnEncounterEnd(encounterId, difficultyId)
+      local encounterId, _, difficultyId, _, success = ...
+      return HaveWeMet:OnEncounterEnd(encounterId, difficultyId, success)
     end
   end
 
@@ -445,7 +445,7 @@ function HaveWeMet.OnInstanceUpdate()
   HaveWeMet:AddActivity(playerGUID, activity, additionalInfo)
 end
 
-function HaveWeMet:OnEncounterEnd(encounterId, difficultyId)
+function HaveWeMet:OnEncounterEnd(encounterId, difficultyId, success)
   local encounter = {
     ["Id"] = tonumber(encounterId),
     ["DifficultyId"] = tonumber(difficultyId),
@@ -544,6 +544,10 @@ function HaveWeMet.GetActivityTitle(activity)
 end
 
 function HaveWeMet.GetEncounters(instanceId)
+  if HaveWeMet.cache["encounters:" .. instanceId] then
+    return HaveWeMet.cache["encounters:" .. instanceId]
+  end
+
   local journalInstanceId = C_EncounterJournal.GetInstanceForGameMap(instanceId)
 
   if not journalInstanceId then
@@ -552,13 +556,13 @@ function HaveWeMet.GetEncounters(instanceId)
 
   EJ_SelectInstance(journalInstanceId)
 
-  local encounters = {}
+  HaveWeMet.cache["encounters:" .. instanceId] = {}
 
   for index = 1, 20 do
     local name, _, _, _, _, _, dungeonEncounterId = EJ_GetEncounterInfoByIndex(index)
 
     if not name then
-      return encounters
+      return HaveWeMet.cache["encounters:" .. instanceId]
     end
 
     local encounterInfo = {
@@ -567,10 +571,10 @@ function HaveWeMet.GetEncounters(instanceId)
       Index = index,
     }
 
-    table.insert(encounters, encounterInfo)
+    table.insert(HaveWeMet.cache["encounters:" .. instanceId], encounterInfo)
   end
 
-  return encounters
+  return HaveWeMet.cache["encounters:" .. instanceId]
 end
 
 function HaveWeMet.GetEncounterTitleFromJournal(instanceId, encounterId)

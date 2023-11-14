@@ -897,35 +897,51 @@ function Notes:SetCharacterNameFilter(text)
     self:Init()
 end
 
-function Notes.OnActivityUpdate()
-    local lastActivity = addon.HaveWeMet.lastActivity
-    local activityName = addon.HaveWeMet.GetActivityTitle(lastActivity)
-
-    if lastActivity then
-        Notes.frame.Header.Label:SetText(format("Current Activity: |cffffffff%s|r", activityName))
-        Notes.frame.Header.Label:SetShown(true)
-
-        local defaultDetailsString = addon.HaveWeMet.GetDetailsString({
-            Activity = lastActivity,
-            Encounters = {},
-        })
-
-        Notes.frame.Header.Progress:SetText(defaultDetailsString)
-
-        local playerGUID = UnitGUID("player")
-        local playerProgress = Dragtheron_WelcomeBack.KnownCharacters[playerGUID]
-
-        if playerProgress then
-            local playerLastActivity = playerProgress.Activities[#playerProgress.Activities]
-
-            if addon.HaveWeMet.IsEqualActivity(playerLastActivity.Activity, lastActivity) then
-                local detailsString = addon.HaveWeMet.GetDetailsString(playerLastActivity)
-                Notes.frame.Header.Progress:SetText(detailsString)
-            end
-        end
-    else
-        Notes.frame.Header.Label:SetShown(false)
+function Notes.OnUpdate()
+    if Notes.updateTimer then
+        Notes.updateTimer:Cancel()
     end
+
+    Notes.updateTimer = C_Timer.NewTimer(3, function()
+        Notes:Init()
+    end)
+end
+
+function Notes.OnActivityUpdate()
+    if Notes.activityUpdateTimer then
+        Notes.activityUpdateTimer:Cancel()
+    end
+
+    Notes.activityUpdateTimer = C_Timer.NewTimer(3, function()
+        local lastActivity = addon.HaveWeMet.lastActivity
+        local activityName = addon.HaveWeMet.GetActivityTitle(lastActivity)
+
+        if lastActivity then
+            Notes.frame.Header.Label:SetText(format("Current Activity: |cffffffff%s|r", activityName))
+            Notes.frame.Header.Label:SetShown(true)
+
+            local defaultDetailsString = addon.HaveWeMet.GetDetailsString({
+                Activity = lastActivity,
+                Encounters = {},
+            })
+
+            Notes.frame.Header.Progress:SetText(defaultDetailsString)
+
+            local playerGUID = UnitGUID("player")
+            local playerProgress = Dragtheron_WelcomeBack.KnownCharacters[playerGUID]
+
+            if playerProgress then
+                local playerLastActivity = playerProgress.Activities[#playerProgress.Activities]
+
+                if addon.HaveWeMet.IsEqualActivity(playerLastActivity.Activity, lastActivity) then
+                    local detailsString = addon.HaveWeMet.GetDetailsString(playerLastActivity)
+                    Notes.frame.Header.Progress:SetText(detailsString)
+                end
+            end
+        else
+            Notes.frame.Header.Label:SetShown(false)
+        end
+    end)
 end
 
 function Notes:SetSearchText(text)
@@ -960,5 +976,5 @@ Notes.frame:RegisterEvent("VARIABLES_LOADED")
 Notes.frame:SetScript("OnEvent", Notes.OnEvent)
 
 EventRegistry:RegisterCallback(addonName .. ".Notes.OnCharacterSelected", Notes.OnCharacterSelected, Notes)
-EventRegistry:RegisterCallback(addonName .. ".HaveWeMet.Update", Notes.Init, Notes)
+EventRegistry:RegisterCallback(addonName .. ".HaveWeMet.Update", Notes.OnUpdate, Notes)
 EventRegistry:RegisterCallback(addonName .. ".HaveWeMet.ActivityUpdate", Notes.OnActivityUpdate, Notes)
