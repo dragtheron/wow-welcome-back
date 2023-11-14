@@ -231,8 +231,8 @@ function HaveWeMet:OnEvent(event, ...)
   if event == "ENCOUNTER_END" then
     HaveWeMet.OnInstanceUpdate()
     if GetServerTime() - HaveWeMet.EncounterStart > 20 then
-      local encounterId, encounterName, difficultyId, _, success = ...
-      return HaveWeMet:OnEncounterEnd(encounterId, encounterName, difficultyId, success)
+      local encounterId, _, difficultyId, _, _ = ...
+      return HaveWeMet:OnEncounterEnd(encounterId, difficultyId)
     end
   end
 
@@ -274,54 +274,20 @@ function HaveWeMet.GetDateString(time)
   return date("%c", time)
 end
 
-function HaveWeMet.GetKeystoneDetailsString(activity)
-  local expectedEncounters = addon.KeystoneEncounters[activity.Activity.Id]
-  local outputString = ""
-
-  local checkIcon = "|A:UI-QuestTracker-Tracker-Check:16:16|a"
-  local failIcon = "|A:UI-QuestTracker-Objective-Fail:16:16|a"
-  local nubIcon = "|A:UI-QuestTracker-Objective-Nub:16:16|a"
-
-  for _, encounterId in ipairs(expectedEncounters) do
-    local encounterCompleted = false
-    local encounterTried = false
-
-    for _, encounter in ipairs(activity.Encounters) do
-      if tonumber(encounter.Id) == encounterId then
-        encounterTried = true
-
-        if encounter.Success then
-          encounterCompleted = true
-        end
-      end
-    end
-
-    if encounterCompleted then
-      outputString = outputString .. checkIcon
-    elseif encounterTried then
-      outputString = outputString .. failIcon
-    else
-      outputString = outputString .. nubIcon
-    end
-  end
-
-  return outputString
-end
-
 function HaveWeMet.GetRaidDetailsString(activity)
-  local expectedEncounters = addon.RaidEncounters[activity.Activity.Id]
+  local expectedEncounters = HaveWeMet.GetEncounters(activity.Activity.Id)
   local outputString = ""
 
   local checkIcon = "|A:UI-QuestTracker-Tracker-Check:16:16|a"
   local failIcon = "|A:UI-QuestTracker-Objective-Fail:16:16|a"
   local nubIcon = "|A:UI-QuestTracker-Objective-Nub:16:16|a"
 
-  for _, encounterId in ipairs(expectedEncounters) do
+  for _, expectedEncounterData in ipairs(expectedEncounters) do
     local encounterCompleted = false
     local encounterTried = false
 
     for _, encounter in ipairs(activity.Encounters) do
-      if tonumber(encounter.Id) == encounterId then
+      if tonumber(encounter.Id) == expectedEncounterData.Id then
         encounterTried = true
 
         if encounter.Success == 1 then
@@ -381,13 +347,13 @@ function HaveWeMet.GetGenericDetailsString(activity)
 end
 
 function HaveWeMet.GetDetailsString(activity)
-  if activity.Activity.KeystoneLevel then
-    return HaveWeMet.GetKeystoneDetailsString(activity)
-  elseif addon.RaidEncounters[activity.Activity.Id] then
+  local expectedEncounters = HaveWeMet.GetEncounters(activity.Activity.Id)
+
+  if #expectedEncounters > 0 then
     return HaveWeMet.GetRaidDetailsString(activity)
-  else
-    return HaveWeMet.GetGenericDetailsString(activity)
   end
+
+  return HaveWeMet.GetGenericDetailsString(activity)
 end
 
 function HaveWeMet.AddActivityLine(tooltip, activity)
@@ -447,10 +413,7 @@ end
 
 
 function HaveWeMet.OnInstanceUpdate()
-  local name, instanceType, difficultyId, difficultyName, _, _, _, instanceId = GetInstanceInfo()
-
-  HaveWeMet.RegisterName(instanceType, instanceId, name)
-  HaveWeMet.RegisterName("difficulty", difficultyId, difficultyName)
+  local _, instanceType, difficultyId, _, _, _, _, instanceId = GetInstanceInfo()
 
   local keystoneLevel
 
@@ -471,14 +434,18 @@ function HaveWeMet.OnInstanceUpdate()
     }
   }
 
+  local playerGUID = UnitGUID("player")
+
   for guid, _ in pairs(Dragtheron_WelcomeBack.LastGroup) do
-    HaveWeMet:AddActivity(guid, activity, additionalInfo)
+    if guid ~= playerGUID then
+      HaveWeMet:AddActivity(guid, activity, additionalInfo)
+    end
   end
+
+  HaveWeMet:AddActivity(playerGUID, activity, additionalInfo)
 end
 
-function HaveWeMet:OnEncounterEnd(encounterId, encounterName, difficultyId, success)
-  HaveWeMet.RegisterName("encounter", encounterId, encounterName)
-
+function HaveWeMet:OnEncounterEnd(encounterId, difficultyId)
   local encounter = {
     ["Id"] = tonumber(encounterId),
     ["DifficultyId"] = tonumber(difficultyId),
@@ -556,49 +523,91 @@ function HaveWeMet:LFGApplicantTooltip()
   end
 end
 
-function HaveWeMet.GetName(type, id)
-  return HaveWeMet.RegisterName(type, id)
-end
-
-function HaveWeMet.RegisterName(type, id, nameValue)
-  local nameIdentifier = format("%s:%s:%s", type, id, locale)
-  local names = Dragtheron_WelcomeBack["Names"] or {}
-  local name = names[nameIdentifier]
-
-  if name then
-    return name
-  end
-
-  Dragtheron_WelcomeBack["Names"] = Dragtheron_WelcomeBack["Names"] or {}
-
-  if nameValue then
-    Dragtheron_WelcomeBack["Names"][nameIdentifier] = nameValue
-  else
-    return "Unknown"
-  end
-end
-
 function HaveWeMet.GetActivityTitle(activity)
   if activity.Title then
     return activity.Title
   end
 
-  local instanceName = HaveWeMet.GetName(activity.Type, activity.Id)
+  local instanceName = HaveWeMet.GetInstanceName(activity.Id)
 
   if activity.KeystoneLevel then
     return format("+%d %s", activity.KeystoneLevel, instanceName)
   end
 
-  local difficultyName = HaveWeMet.GetName("difficulty", activity.DifficultyId)
-  return format("%s %s", difficultyName, instanceName)
+  local difficultyName = HaveWeMet.GetDifficultyName(activity.DifficultyId)
+
+  if difficultyName then
+    return format("%s %s", difficultyName, instanceName)
+  else
+    return instanceName
+  end
 end
 
-function HaveWeMet.GetEncounterTitle(encounter)
-  if encounter.Name then
-    return encounter.Name
+function HaveWeMet.GetEncounters(instanceId)
+  local journalInstanceId = C_EncounterJournal.GetInstanceForGameMap(instanceId)
+
+  if not journalInstanceId then
+    return {}
   end
 
-  return HaveWeMet.GetName("encounter", encounter.Id)
+  EJ_SelectInstance(journalInstanceId)
+
+  local encounters = {}
+
+  for index = 1, 20 do
+    local name, _, _, _, _, _, dungeonEncounterId = EJ_GetEncounterInfoByIndex(index)
+
+    if not name then
+      return encounters
+    end
+
+    local encounterInfo = {
+      Id = dungeonEncounterId,
+      Name = name,
+      Index = index,
+    }
+
+    table.insert(encounters, encounterInfo)
+  end
+
+  return encounters
+end
+
+function HaveWeMet.GetEncounterTitleFromJournal(instanceId, encounterId)
+  local journalInstanceId = C_EncounterJournal.GetInstanceForGameMap(tonumber(instanceId))
+
+  if not journalInstanceId then
+    return "Unknown"
+  end
+
+  EJ_SelectInstance(journalInstanceId)
+
+  for index = 1, 20 do
+    local name, _, _, _, _, _, dungeonEncounterId = EJ_GetEncounterInfoByIndex(index)
+
+    if not name then
+      return "Unknown"
+    end
+
+    if dungeonEncounterId == encounterId then
+      return name
+    end
+  end
+end
+
+function HaveWeMet.GetInstanceName(instanceId)
+  local journalInstanceId = C_EncounterJournal.GetInstanceForGameMap(instanceId)
+
+  if not journalInstanceId then
+    return "Unknown"
+  end
+
+  EJ_SelectInstance(journalInstanceId)
+  return EJ_GetInstanceInfo()
+end
+
+function HaveWeMet.GetDifficultyName(difficultyId)
+  return GetDifficultyInfo(difficultyId)
 end
 
 HaveWeMet.frame:RegisterEvent("GROUP_ROSTER_UPDATE")

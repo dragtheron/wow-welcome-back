@@ -151,18 +151,25 @@ local function addTreeDataForActivityCategory(categoryInfo, node)
             activityNode:SetCollapsed(true)
         end
 
+        local uniqueEncounters = {}
+
+        local expectedEncounters = addon.HaveWeMet.GetEncounters(activityInfo.Activity.Id)
+
         if expectedEncounters then
-            for index, encounterId in ipairs(expectedEncounters) do
-                uniqueEncounters[encounterId] = {
-                    Id = encounterId,
+            for _, encounter in ipairs(expectedEncounters) do
+                uniqueEncounters[encounter.Id] = {
+                    Name = encounter.Name,
+                    Id = encounter.Id,
+                    order = encounter.Index,
                     kills = 0,
                     wipes = 0,
-                    order = index,
                 }
             end
         end
 
         for encounterIndex, encounterInfo in ipairs(activityInfo.Encounters) do
+
+            encounterInfo.instanceId = activityInfo.Id
 
             if not expectedEncounters then
                 if not uniqueEncounters[encounterInfo.Id] then
@@ -289,7 +296,7 @@ WelcomeBack_NotesEncounterMixin = CreateFromMixins(WelcomeBack_NotesCategoryMixi
 function WelcomeBack_NotesEncounterMixin:Init(node)
     local elementData = node:GetData()
     local encounterInfo = elementData.encounterInfo
-    local encounterTitle = addon.HaveWeMet.GetEncounterTitle(encounterInfo)
+    local encounterTitle = encounterInfo.Name
     local encounterCounters = addon.HaveWeMet.GetKillsWipesCountString(encounterInfo.kills, encounterInfo.wipes)
     self.Label:SetFontObject(encounterInfo.kills > 0 and GameFontHighlight_NoShadow or GameFontDisable)
     self.Label:SetText(encounterTitle)
