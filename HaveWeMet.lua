@@ -3,14 +3,14 @@ local addonName, addon = ...
 local DIFFICULTY_CHALLENGE_MODE = 8;
 local locale = GetLocale()
 
-local HaveWeMet = {
-  ["loaded"] = false,
-  ["lastActivity"] = nil,
-  ["EncounterStart"] = 0,
-}
-
+local HaveWeMet = CreateFromMixins(CallbackRegistryMixin)
+HaveWeMet.loaded = false
+HaveWeMet.lastActivity = nil
+HaveWeMet.EncounterStart = 0
 DT_HWM = HaveWeMet
 HaveWeMet.frame = CreateFrame("Frame")
+
+CallbackRegistryMixin.OnLoad(HaveWeMet.frame)
 
 local function printColored(text, color)
   print(color .. text .. "|r")
@@ -91,6 +91,9 @@ end
 
 function HaveWeMet:AddActivity(guid, activity, additionalInfo)
   if not Dragtheron_WelcomeBack.KnownCharacters[guid] then
+
+    self:AnnounceUpdate()
+
     return HaveWeMet:CheckCharacters()
   end
 
@@ -129,6 +132,8 @@ function HaveWeMet:AddEncounter(guid, encounter)
   table.insert(
     Dragtheron_WelcomeBack.KnownCharacters[guid].Activities[lastActivityIdx].Encounters,
     encounter)
+
+  self:AnnounceUpdate()
 end
 
 function HaveWeMet:RegisterCharacter(character)
@@ -181,6 +186,10 @@ function HaveWeMet:CheckCharacter(character)
   end
 end
 
+function HaveWeMet:AnnounceUpdate()
+  EventRegistry:TriggerEvent(addonName .. ".HaveWeMet.Update")
+end
+
 function HaveWeMet:OnEvent(event, ...)
   if event == "VARIABLES_LOADED" then
     if Dragtheron_WelcomeBack == nil then
@@ -217,14 +226,6 @@ function HaveWeMet:OnEvent(event, ...)
       local encounterId, encounterName, difficultyId, _, success = ...
       return HaveWeMet:OnEncounterEnd(encounterId, encounterName, difficultyId, success)
     end
-  end
-
-  if event == "CHALLENGE_MODE_COMPLETED" then
-    print("Challange Mode completed.")
-  end
-
-  if event == "SCENARIO_COMPLETED" then
-    print("Scenario completed.")
   end
 
   if not self.loaded then
@@ -426,10 +427,6 @@ function HaveWeMet.OnUnitTooltip(tooltip, data)
   local playerGUID = UnitGUID("player")
   local knownCharacter = Dragtheron_WelcomeBack.KnownCharacters[data.guid]
 
-  if playerGUID == data.guid then
-    -- knownCharacter = Dragtheron_WelcomeBack.KnownCharacters["Player-3691-0A12FB19"]
-  end
-
   if not data.guid:find("^Player%-%d+") then
     return
   end
@@ -605,9 +602,6 @@ HaveWeMet.frame:RegisterEvent("PLAYER_GUILD_UPDATE")
 HaveWeMet.frame:RegisterEvent("PARTY_MEMBER_ENABLE")
 HaveWeMet.frame:RegisterEvent("PARTY_MEMBER_DISABLE")
 HaveWeMet.frame:RegisterEvent("GUILD_PARTY_STATE_UPDATED")
-
-HaveWeMet.frame:RegisterEvent("CHALLENGE_MODE_COMPLETED")
-HaveWeMet.frame:RegisterEvent("SCENARIO_COMPLETED")
 
 HaveWeMet.frame:SetScript("OnEvent", HaveWeMet.OnEvent)
 

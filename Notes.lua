@@ -623,7 +623,6 @@ mainFrame.Activities = activitiesFrame
 Notes.frame = mainFrame
 
 function Notes:Init()
-    local searching = characterList.SearchBox:HasText()
     local dataProvider = self:GenerateCharacterDataProvider()
     ScrollUtil.InitScrollBoxListWithScrollBar(characterList.ScrollBox, characterList.ScrollBar, characterListView)
     characterList.ScrollBox:SetDataProvider(dataProvider, ScrollBoxConstants.RetainScrollPosition)
@@ -821,3 +820,4 @@ Notes.frame:RegisterEvent("VARIABLES_LOADED")
 Notes.frame:SetScript("OnEvent", Notes.OnEvent)
 
 EventRegistry:RegisterCallback(addonName .. ".Notes.OnCharacterSelected", Notes.OnCharacterSelected, Notes)
+EventRegistry:RegisterCallback(addonName .. ".HaveWeMet.Update", Notes.Init, Notes)
