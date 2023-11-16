@@ -904,6 +904,7 @@ function Notes.OnUpdate()
 
     Notes.updateTimer = C_Timer.NewTimer(3, function()
         Notes:Init()
+        Notes.OnActivityUpdate()
     end)
 end
 
@@ -930,7 +931,7 @@ function Notes.OnActivityUpdate()
             local playerGUID = UnitGUID("player")
             local playerProgress = Dragtheron_WelcomeBack.KnownCharacters[playerGUID]
 
-            if playerProgress then
+            if playerProgress and #playerProgress.Activities > 0 then
                 local playerLastActivity = playerProgress.Activities[#playerProgress.Activities]
 
                 if addon.HaveWeMet.IsEqualActivity(playerLastActivity.Activity, lastActivity) then

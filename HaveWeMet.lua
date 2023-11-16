@@ -37,8 +37,6 @@ function HaveWeMet:RegisterActivity(type, id, keystoneLevel, difficultyId)
     ["DifficultyId"] = difficultyId,
   }
 
-  EventRegistry:TriggerEvent(addonName .. ".HaveWeMet.ActivityUpdate")
-
   return self.lastActivity
 end
 
@@ -88,8 +86,6 @@ function HaveWeMet:CheckCharacters()
   for _, character in ipairs(characters) do
     self:AddToGroup(character)
   end
-
-  self:AnnounceUpdate()
 end
 
 function HaveWeMet:IsKnownCharacter(character)
@@ -142,8 +138,6 @@ function HaveWeMet:AddEncounter(guid, encounter)
   table.insert(
     Dragtheron_WelcomeBack.KnownCharacters[guid].Activities[lastActivityIdx].Encounters,
     encounter)
-
-  self:AnnounceUpdate()
 end
 
 function HaveWeMet:RegisterCharacter(character)
@@ -230,10 +224,15 @@ function HaveWeMet:OnEvent(event, ...)
 
   if event == "ENCOUNTER_END" then
     HaveWeMet.OnInstanceUpdate()
-    if GetServerTime() - HaveWeMet.EncounterStart > 20 then
+    local time = GetServerTime()
+
+    if time - HaveWeMet.EncounterStart > 20 then
       local encounterId, _, difficultyId, _, success = ...
       return HaveWeMet:OnEncounterEnd(encounterId, difficultyId, success)
+      HaveWeMet:AnnounceUpdate()
     end
+
+    return
   end
 
   if not self.loaded then
@@ -247,6 +246,7 @@ function HaveWeMet:OnEvent(event, ...)
   self.checkCharactersTimer = C_Timer.NewTimer(3, function()
     HaveWeMet:CheckCharacters()
     HaveWeMet.OnInstanceUpdate()
+    HaveWeMet:AnnounceUpdate()
   end)
 end
 
@@ -421,6 +421,11 @@ function HaveWeMet.OnInstanceUpdate()
      keystoneLevel = C_ChallengeMode.GetActiveKeystoneInfo()
   end
 
+  if instanceType == "none" then
+    HaveWeMet.lastActivity = nil
+    return
+  end
+
   local activity = HaveWeMet:RegisterActivity(instanceType, instanceId, keystoneLevel, difficultyId)
 
   if activity == false then
@@ -524,6 +529,10 @@ function HaveWeMet:LFGApplicantTooltip()
 end
 
 function HaveWeMet.GetActivityTitle(activity)
+  if not activity then
+    return "Unknown"
+  end
+
   if activity.Title then
     return activity.Title
   end
@@ -578,7 +587,7 @@ function HaveWeMet.GetEncounters(instanceId)
 end
 
 function HaveWeMet.GetEncounterTitleFromJournal(instanceId, encounterId)
-  local journalInstanceId = C_EncounterJournal.GetInstanceForGameMap(tonumber(instanceId))
+  local journalInstanceId = C_EncounterJournal.GetInstanceForGameMap(instanceId)
 
   if not journalInstanceId then
     return "Unknown"
