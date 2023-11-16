@@ -6,9 +6,24 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
-## [1.2.0](https://git.tsno.de/dragtheron/wow-welcome-back/tags/1.2.0) - 2023-11-14
+## [1.2.0](https://git.tsno.de/dragtheron/wow-welcome-back/tags/1.2.0) - 2023-11-16
 
-<small>[Compare with 1.1.0](https://git.tsno.de/dragtheron/wow-welcome-back/compare/1.1.0...1.2.0)</small>
+<small>[Compare with 1.2.0-beta3](https://git.tsno.de/dragtheron/wow-welcome-back/compare/1.2.0-beta3...1.2.0)</small>
+
+### Features
+
+- prepare overlay ([3581318](https://git.tsno.de/dragtheron/wow-welcome-back/commit/3581318522264585f7ddbe2de2eda2c5e0576177) by Tobias Stettner).
+- display total wipe count in activity summary ([3051ff0](https://git.tsno.de/dragtheron/wow-welcome-back/commit/3051ff0cffd18f8c6cec49b6780f45f7cae7fea6) by Tobias Stettner).
+- add encounter times to tooltips in notes frame ([a936091](https://git.tsno.de/dragtheron/wow-welcome-back/commit/a936091a4a4555f3212c0d92c0e50fddc0dc4e2e) by Tobias Stettner).
+
+### Bug Fixes
+
+- hide empty notes on tooltips ([5511980](https://git.tsno.de/dragtheron/wow-welcome-back/commit/5511980a05cd0d76700512cace1e2290d401f3da) by Tobias Stettner).
+- trigger update events only when necessary ([ae62109](https://git.tsno.de/dragtheron/wow-welcome-back/commit/ae62109c0ed5e67a9db6ff67dc90cba348b94627) by Tobias Stettner).
+
+## [1.2.0-beta3](https://git.tsno.de/dragtheron/wow-welcome-back/tags/1.2.0-beta3) - 2023-11-14
+
+<small>[Compare with 1.1.0](https://git.tsno.de/dragtheron/wow-welcome-back/compare/1.1.0...1.2.0-beta3)</small>
 
 ### Features
 
