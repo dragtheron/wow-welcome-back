@@ -281,6 +281,9 @@ function HaveWeMet.GetRaidDetailsString(activity)
   local checkIcon = "|A:UI-QuestTracker-Tracker-Check:16:16|a"
   local failIcon = "|A:UI-QuestTracker-Objective-Fail:16:16|a"
   local nubIcon = "|A:UI-QuestTracker-Objective-Nub:16:16|a"
+  local deathIcon = "|A:poi-graveyard-neutral:16:12|a"
+
+  local deaths = 0
 
   for _, expectedEncounterData in ipairs(expectedEncounters) do
     local encounterCompleted = false
@@ -292,6 +295,8 @@ function HaveWeMet.GetRaidDetailsString(activity)
 
         if encounter.Success == 1 then
           encounterCompleted = true
+        else
+          deaths = deaths + 1
         end
       end
     end
@@ -305,7 +310,11 @@ function HaveWeMet.GetRaidDetailsString(activity)
     end
   end
 
-  return outputString
+  if deaths > 0 then
+    return format("%s %d   %s", deathIcon, deaths, outputString)
+  else
+    return outputString
+  end
 end
 
 function HaveWeMet.GetKillsWipesCountString(kills, wipes)
