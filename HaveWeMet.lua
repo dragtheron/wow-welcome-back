@@ -401,7 +401,7 @@ function HaveWeMet.AddTooltipInfo(character, tooltip)
       addColoredLine(tooltip, format("(and %d more activites)", moreActivites), HIGHLIGHT_FONT_COLOR)
     end
 
-    if character.Note then
+    if character.Note and character.Note ~= "" then
       tooltip:AddLine(" ")
       addColoredLine(tooltip, format("\"%s\"", character.Note), NORMAL_FONT_COLOR)
     end
