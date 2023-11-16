@@ -228,7 +228,7 @@ function HaveWeMet:OnEvent(event, ...)
 
     if time - HaveWeMet.EncounterStart > 20 then
       local encounterId, _, difficultyId, _, success = ...
-      return HaveWeMet:OnEncounterEnd(encounterId, difficultyId, success)
+      HaveWeMet:OnEncounterEnd(encounterId, difficultyId, success, time)
       HaveWeMet:AnnounceUpdate()
     end
 
@@ -450,11 +450,12 @@ function HaveWeMet.OnInstanceUpdate()
   HaveWeMet:AddActivity(playerGUID, activity, additionalInfo)
 end
 
-function HaveWeMet:OnEncounterEnd(encounterId, difficultyId, success)
+function HaveWeMet:OnEncounterEnd(encounterId, difficultyId, success, time)
   local encounter = {
-    ["Id"] = tonumber(encounterId),
-    ["DifficultyId"] = tonumber(difficultyId),
-    ["Success"] = tonumber(success),
+    Id = tonumber(encounterId),
+    DifficultyId = tonumber(difficultyId),
+    Success = tonumber(success),
+    Time = time,
   }
 
   Dragtheron_WelcomeBack.PreviousGroup = {}

@@ -161,6 +161,7 @@ local function addTreeDataForActivityCategory(categoryInfo, node)
                     Name = encounter.Name,
                     Id = encounter.Id,
                     order = encounter.Index,
+                    times = {},
                     kills = 0,
                     wipes = 0,
                 }
@@ -169,14 +170,13 @@ local function addTreeDataForActivityCategory(categoryInfo, node)
 
         for encounterIndex, encounterInfo in ipairs(activityInfo.Encounters) do
 
-            encounterInfo.instanceId = activityInfo.Id
-
             if not expectedEncounters then
                 if not uniqueEncounters[encounterInfo.Id] then
                     uniqueEncounters[encounterInfo.Id] = encounterInfo
                     uniqueEncounters[encounterInfo.Id].kills = 0
                     uniqueEncounters[encounterInfo.Id].wipes = 0
                     uniqueEncounters[encounterInfo.Id].order = encounterIndex
+                    uniqueEncounters[encounterInfo.Id].times = {}
                 end
             end
 
@@ -185,9 +185,12 @@ local function addTreeDataForActivityCategory(categoryInfo, node)
             else
                 uniqueEncounters[encounterInfo.Id].wipes = uniqueEncounters[encounterInfo.Id].wipes + 1
             end
+
+            table.insert(uniqueEncounters[encounterInfo.Id].times, encounterInfo.Time)
         end
 
         for _, encounterInfo in pairs(uniqueEncounters) do
+            encounterInfo.instanceId = activityInfo.Activity.Id
             activityNode:Insert({ encounterInfo = encounterInfo, order = 0 })
         end
     end
@@ -282,8 +285,10 @@ function WelcomeBack_NotesActivityMixin:OnEnter(node)
     local elementData = self:GetElementData()
     local activityInfo = elementData.data.activityInfo
     local activityDate = addon.HaveWeMet.GetDateString(activityInfo.Time)
+    local activityTitle = addon.HaveWeMet.GetActivityTitle(activityInfo.Activity)
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    GameTooltip_AddHighlightLine(GameTooltip, activityDate)
+    GameTooltip:AddLine(activityTitle)
+    GameTooltip:AddLine(activityDate, 1, 1, 1)
     GameTooltip:Show()
 end
 
@@ -304,8 +309,22 @@ function WelcomeBack_NotesEncounterMixin:Init(node)
 end
 
 function WelcomeBack_NotesEncounterMixin:OnEnter(node)
+    local elementData = self:GetElementData()
+    local encounterInfo = elementData.data.encounterInfo
+    local encounterName = addon.HaveWeMet.GetEncounterTitleFromJournal(encounterInfo.instanceId, encounterInfo.Id)
     self.Label:SetFontObject(GameFontHighlight_NoShadow)
     self.HighlightOverlay:SetShown(false)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:AddLine(encounterName)
+
+    if encounterInfo.times then
+        for _, disengageTime in ipairs(encounterInfo.times) do
+            local encounterTime = addon.HaveWeMet.GetDateString(disengageTime)
+            GameTooltip:AddLine(encounterTime, 1, 1, 1)
+        end
+    end
+
+    GameTooltip:Show()
 end
 
 function WelcomeBack_NotesEncounterMixin:OnLeave()
