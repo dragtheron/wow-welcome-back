@@ -6,9 +6,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
-## [1.2.0](https://git.tsno.de/dragtheron/wow-welcome-back/tags/1.2.0) - 2023-11-16
+## [1.2.0-beta4](https://git.tsno.de/dragtheron/wow-welcome-back/tags/1.2.0-beta4) - 2023-11-16
 
-<small>[Compare with 1.2.0-beta3](https://git.tsno.de/dragtheron/wow-welcome-back/compare/1.2.0-beta3...1.2.0)</small>
+<small>[Compare with 1.2.0-beta3](https://git.tsno.de/dragtheron/wow-welcome-back/compare/1.2.0-beta3...1.2.0-beta4)</small>
 
 ### Features
 
