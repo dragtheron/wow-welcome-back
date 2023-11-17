@@ -15,6 +15,7 @@
 HaveWeMet.lua
 
 Notes.xml
+Overlay.lua
 
 Commands.lua
 Compartment.lua

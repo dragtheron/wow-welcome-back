@@ -355,6 +355,8 @@ mainFrame:SetPoint("TOPLEFT", 0, 0)
 mainFrame:SetTitle("Welcome Back: Notes")
 mainFrame:SetPortraitToUnit("player")
 mainFrame:SetPortraitToAsset("Interface\\ICONS\\achievement_guildperk_havegroup willtravel")
+mainFrame:SetScript("OnHide", function() addon.Overlay.frame:Show() end)
+mainFrame:SetScript("OnShow", function() addon.Overlay.frame:Hide() end)
 
 local header = CreateFrame("Frame", "$parentHeader", mainFrame)
 header:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 64, -34)

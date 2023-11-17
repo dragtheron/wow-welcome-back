@@ -21,3 +21,8 @@ Welcome Back automatically keeps track of players in your group or raid and info
 - Add notes to players you played with.
 - Get an detailed overview over every activity.
 - Search for an character.
+
+## Slash Commands
+
+- Use `/wb` to open the character and activity history.
+- Use `/wboverlay` to toggle an overlay on the top left corner of the screen showing your current activity with the respective progress information.

@@ -3,6 +3,7 @@ local addonName, addon = ...
 local frame = CreateFrame("Frame", "WelcomeBack_Overlay", UIParent)
 frame:SetPoint("TOPLEFT", 40, -40)
 frame:SetSize(300, 40)
+frame:SetShown(false)
 
 frame.ActivityLine = frame:CreateFontString(nil, "BACKGROUND", "GameFontNormalSmall")
 frame.ActivityLine:SetPoint("TOPLEFT", 0, 0)
@@ -17,6 +18,16 @@ frame.ActivityProgress:SetWidth(frame:GetWidth())
 frame.ActivityProgress:SetHeight(16)
 frame.ActivityProgress:SetText("...")
 frame.ActivityProgress:SetJustifyH("LEFT")
+
+frame:SetScript("OnEvent", function(self, event)
+    if event == "VARIABLES_LOADED" then
+        if Dragtheron_WelcomeBack.Settings then
+            frame:SetShown(Dragtheron_WelcomeBack.Settings.ShowOverlay)
+        end
+    end
+end)
+
+frame:RegisterEvent("VARIABLES_LOADED")
 
 local function onUpdate()
     local lastActivity = addon.HaveWeMet.lastActivity
@@ -59,6 +70,17 @@ end
 addon.Overlay = {
     frame = frame
 }
+
+function addon.Overlay.ToggleFrame()
+    local shouldShow = not frame:IsShown()
+    frame:SetShown(shouldShow)
+
+    if not Dragtheron_WelcomeBack.Settings then
+        Dragtheron_WelcomeBack.Settings = {}
+    end
+
+    Dragtheron_WelcomeBack.Settings.ShowOverlay = shouldShow;
+end
 
 EventRegistry:RegisterCallback(addonName .. ".HaveWeMet.Update", onUpdate)
 EventRegistry:RegisterCallback(addonName .. ".HaveWeMet.ActivityUpdate", onUpdate)
