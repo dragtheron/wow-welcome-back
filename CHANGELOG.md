@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
+## [1.2.0](https://git.tsno.de/dragtheron/wow-welcome-back/tags/1.2.0) - 2023-11-17
+
+<small>[Compare with 1.2.0-beta4](https://git.tsno.de/dragtheron/wow-welcome-back/compare/1.2.0-beta4...1.2.0)</small>
+
+### Features
+
+- add overlay ([74b49e7](https://git.tsno.de/dragtheron/wow-welcome-back/commit/74b49e731598d8ab751fb7feb9cbc2d6783be006) by Tobias Stettner).
+
 ## [1.2.0-beta4](https://git.tsno.de/dragtheron/wow-welcome-back/tags/1.2.0-beta4) - 2023-11-16
 
 <small>[Compare with 1.2.0-beta3](https://git.tsno.de/dragtheron/wow-welcome-back/compare/1.2.0-beta3...1.2.0-beta4)</small>
