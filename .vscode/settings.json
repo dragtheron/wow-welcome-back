@@ -109,6 +109,11 @@
     "C_EncounterJournal",
     "EJ_GetEncounterInfoByIndex",
     "GetNormalizedRealmName",
-    "AdventureGuideUtil"
+    "AdventureGuideUtil",
+    "class",
+    "select",
+    "UnitClassBase",
+    "RAID_CLASS_COLORS",
+    "GetColoredName"
   ]
 }

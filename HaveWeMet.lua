@@ -62,6 +62,7 @@ function HaveWeMet:CheckCharacters()
     if UnitExists(unit) then
       local name, realm = UnitNameUnmodified(unit)
       local guid = UnitGUID(unit)
+      local classFilename = UnitClassBase(unit)
 
       if name ~= UNKNOWNOBJECT then
         if realm == nil then
@@ -73,6 +74,7 @@ function HaveWeMet:CheckCharacters()
           guid = guid,
           name = name,
           realm = realm,
+          classFilename = classFilename,
         }
 
         table.insert(characters, character)
@@ -141,15 +143,24 @@ function HaveWeMet:AddEncounter(guid, encounter)
 end
 
 function HaveWeMet:RegisterCharacter(character)
-  Dragtheron_WelcomeBack.KnownCharacters[character.guid] = {
-    ["CharacterInfo"] = {
-      ["Name"] = character.name,
-      ["Realm"] = character.realm,
-    },
-    ["FirstContact"] = GetServerTime(),
-    ["Activities"] = {},
-    ["DanglingActivity"] = nil,
+  local knownCharacter = self:IsKnownCharacter(character)
+
+  local characterInfo = {
+    Name = character.name,
+    Realm = character.realm,
+    ClassFilename = character.classFilename,
   }
+
+  if knownCharacter then
+    knownCharacter.CharacterInfo = characterInfo
+  else
+    Dragtheron_WelcomeBack.KnownCharacters[character.guid] = {
+      ["CharacterInfo"] = characterInfo,
+      ["FirstContact"] = GetServerTime(),
+      ["Activities"] = {},
+      ["DanglingActivity"] = nil,
+    }
+  end
 end
 
 function HaveWeMet:IsInGroup(character)
@@ -161,14 +172,10 @@ function HaveWeMet:AddToGroup(character)
 end
 
 function HaveWeMet:CheckCharacter(character)
+  self:RegisterCharacter(character)
+
   if self:IsInGroup(character) then
     return
-  end
-
-  local knownCharacter = self:IsKnownCharacter(character)
-
-  if not knownCharacter then
-    self:RegisterCharacter(character)
   end
 
   local color = {
@@ -564,6 +571,11 @@ end
 
 function HaveWeMet.GetSelectedInstanceId()
   local mapId = select(10, EJ_GetInstanceInfo())
+
+  if not mapId then
+    return nil
+  end
+
   return C_EncounterJournal.GetInstanceForGameMap(mapId) or nil
 end
 

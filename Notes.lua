@@ -127,7 +127,7 @@ local function addTreeDataForCategory(categoryInfo, node)
     return categoryNode
 end
 
-local function addTreeDataForActivityCategory(categoryInfo, node)
+local function addTreeDataForActivityCategory(categoryInfo, node, collapses)
     if #categoryInfo.activities == 0 then
         return
     end
@@ -147,8 +147,12 @@ local function addTreeDataForActivityCategory(categoryInfo, node)
         local activityNode = categoryNode:Insert({ activityInfo = activityInfo, order = 0 })
         activityNode:SetSortComparator(sortEncounterData, affectChildren, skipSort)
 
-        if activityInfo.collapsed then
-            activityNode:SetCollapsed(true)
+        if collapses and collapses[activityInfo.index] then
+            activityNode:SetCollapses(true)
+        else
+            if activityInfo.collapsed then
+                activityNode:SetCollapsed(true)
+            end
         end
 
         local uniqueEncounters = {}
@@ -228,7 +232,7 @@ end
 WelcomeBack_NotesCharacterMixin = {}
 
 function WelcomeBack_NotesCharacterMixin:GetLabelText(characterInfo)
-    return Notes.GetCharacterName(characterInfo)
+    return Notes.GetColoredCharacterName(characterInfo)
 end
 
 function WelcomeBack_NotesCharacterMixin:Init(node)
@@ -239,7 +243,7 @@ function WelcomeBack_NotesCharacterMixin:Init(node)
     self.highlight = (elementData.characterInfo.Known and elementData.highlightKnown)
         or (elementData.characterInfo.InGroup and elementData.highlightCurrentGroupMembers)
 
-    self:SetLabelFontColors(self.highlight and PROFESSION_RECIPE_COLOR or DISABLED_FONT_COLOR)
+    self.Label:SetAlpha(self.highlight and 1.0 or 0.5)
 end
 
 function WelcomeBack_NotesCharacterMixin:SetSelected(selected)
@@ -252,7 +256,7 @@ function WelcomeBack_NotesCharacterMixin:SetLabelFontColors(color)
 end
 
 function WelcomeBack_NotesCharacterMixin:OnEnter()
-    self:SetLabelFontColors(HIGHLIGHT_FONT_COLOR)
+    self.Label:SetAlpha(1.0)
     local elementData = self:GetElementData()
     local characterName = Notes.GetCharacterName(elementData.data.characterInfo)
 
@@ -265,7 +269,7 @@ function WelcomeBack_NotesCharacterMixin:OnEnter()
 end
 
 function WelcomeBack_NotesCharacterMixin:OnLeave()
-    self:SetLabelFontColors(self.highlight and PROFESSION_RECIPE_COLOR or DISABLED_FONT_COLOR)
+    self.Label:SetAlpha(self.highlight and 1.0 or 0.5)
     GameTooltip:Hide()
 end
 
@@ -355,8 +359,14 @@ mainFrame:SetPoint("TOPLEFT", 0, 0)
 mainFrame:SetTitle("Welcome Back: Notes")
 mainFrame:SetPortraitToUnit("player")
 mainFrame:SetPortraitToAsset("Interface\\ICONS\\achievement_guildperk_havegroup willtravel")
-mainFrame:SetScript("OnHide", function() addon.Overlay.frame:Show() end)
-mainFrame:SetScript("OnShow", function() addon.Overlay.frame:Hide() end)
+
+mainFrame:SetScript("OnHide", function()
+    addon.Overlay.frame:Show()
+end)
+
+mainFrame:SetScript("OnShow", function()
+    addon.Overlay.frame:Hide()
+end)
 
 local header = CreateFrame("Frame", "$parentHeader", mainFrame)
 header:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 64, -34)
@@ -415,22 +425,6 @@ characterList.ScrollBar = CreateFrame("EventFrame", nil, characterList, "Minimal
 characterList.ScrollBar:SetPoint("TOPLEFT", characterList.ScrollBox, "TOPRIGHT", 0, 0)
 characterList.ScrollBar:SetPoint("BOTTOMLEFT", characterList.ScrollBox, "BOTTOMRIGHT", 0, 0)
 characterList.ScrollBar:OnLoad()
-
-function characterList:StoreCollapses(scrollBox)
-    self.collapses = {}
-    local dataProvider = scrollBox:GetDataProvider()
-    local childrenNodes = dataProvider:GetChildrenNodes()
-
-    for _, child in ipairs(childrenNodes) do
-        if child.data and child:IsCollapsed() then
-            self.collapses[child.data.categoryInfo.categoryId] = true
-        end
-    end
-end
-
-function characterList:GetCollapses()
-    return self.collapses
-end
 
 local indent = 10
 local padTop, padBottom, padLeft, padRight = 5, 5, 0, 5
@@ -584,7 +578,7 @@ characterDetails.Summary = summaryFrame
 
 function characterDetails:Refresh()
     local characterInfo = Notes.selectedCharacterInfo
-    self.Summary.CharacterName:SetText(characterInfo.Name)
+    self.Summary.CharacterName:SetText(Notes.GetColoredName(characterInfo))
     self.Summary.CharacterRealm:SetText(characterInfo.Realm)
 
     local characterData = Dragtheron_WelcomeBack.KnownCharacters[characterInfo.Id]
@@ -701,12 +695,28 @@ activitiesListView:SetElementExtentCalculator(function(_, node)
     end
 end)
 
+function activitiesFrame:StoreCollapses(scrollbox)
+    self.collapses = {}
+    local dataProvider = scrollbox:GetDataProvider()
+    local childrenNodes = dataProvider:GetChildrenNodes()
+
+    for _, child in ipairs(childrenNodes) do
+        if child.data and child:IsCollapsed() then
+            self.collapses[child.data.activityInfo.index] = true
+        end
+    end
+end
+
+function activitiesFrame:GetCollapses()
+    return self.collapses
+end
+
 function activitiesFrame:Refresh()
     local characterInfo = Notes.selectedCharacterInfo
     local characterData = Dragtheron_WelcomeBack.KnownCharacters[characterInfo.Id]
     local activities = characterData.Activities
 
-    local dataProvider = Notes:GenerateActivitiesDataProvider()
+    local dataProvider = Notes:GenerateActivitiesDataProvider(self:GetCollapses())
     ScrollUtil.InitScrollBoxListWithScrollBar(self.ScrollBox, self.ScrollBar, self.view)
     self.ScrollBox:SetDataProvider(dataProvider, ScrollBoxConstants.RetainScrollPosition)
     self.NoResultsText:SetShown(#activities == 0)
@@ -729,11 +739,15 @@ function Notes:Init()
 end
 
 function Notes:Refresh()
+    if self.selectedCharacterInfo then
+        self.frame.Activities:StoreCollapses(activitiesFrame.ScrollBox)
+    end
 
+    self:Init()
 end
 
 function Notes:ShowFrame()
-    self:Init()
+    self:Refresh()
     ShowUIPanel(self.frame)
 end
 
@@ -790,6 +804,7 @@ function Notes:GenerateCharacterDataProvider()
         local character = {
             Name = characterData.CharacterInfo.Name,
             Realm = characterData.CharacterInfo.Realm,
+            ClassFilename = characterData.CharacterInfo.ClassFilename,
             Id = characterId,
         }
 
@@ -841,7 +856,7 @@ function Notes:GenerateCharacterDataProvider()
     return dataProvider
 end
 
-function Notes:GenerateActivitiesDataProvider()
+function Notes:GenerateActivitiesDataProvider(collapses)
     local characterData = Dragtheron_WelcomeBack.KnownCharacters[self.selectedCharacterInfo.Id]
     local dataProvider = CreateTreeDataProvider()
 
@@ -873,6 +888,8 @@ function Notes:GenerateActivitiesDataProvider()
     for i = #characterData.Activities, 1, -1 do
         local activity = characterData.Activities[i]
         local activityInfo = activity
+
+        activity.index = i
 
         if activity.AdditionalInfo.Instance.Type == "raid" then
             if #raidActivities > 0 then
@@ -907,7 +924,7 @@ function Notes:GenerateActivitiesDataProvider()
     node:SetSortComparator(sortRootData, affectChildren, skipSort)
 
     for _, categoryInfo in pairs(categories) do
-        addTreeDataForActivityCategory(categoryInfo, node)
+        addTreeDataForActivityCategory(categoryInfo, node, collapses)
     end
 
     return dataProvider
@@ -915,7 +932,7 @@ end
 
 function Notes:SetCharacterNameFilter(text)
     self.filters[Filter.CharacterName] = text
-    self:Init()
+    self:Refresh()
 end
 
 function Notes.OnUpdate()
@@ -924,7 +941,7 @@ function Notes.OnUpdate()
     end
 
     Notes.updateTimer = C_Timer.NewTimer(3, function()
-        Notes:Init()
+        Notes:Refresh()
         Notes.OnActivityUpdate()
     end)
 end
@@ -971,12 +988,31 @@ function Notes:SetSearchText(text)
     self:SetCharacterNameFilter(text)
 end
 
+function Notes.GetColoredName(characterInfo)
+    local classColor = characterInfo.ClassFilename
+        and RAID_CLASS_COLORS[characterInfo.ClassFilename]
+        or NORMAL_FONT_COLOR
+
+    return classColor:WrapTextInColorCode(characterInfo.Name)
+end
+
+function Notes.GetColoredCharacterName(characterInfo, forceRealm)
+    local characterName = Notes.GetColoredName(characterInfo)
+    return Notes.AppendRealm(characterName, characterInfo.Realm, forceRealm)
+end
+
 function Notes.GetCharacterName(characterInfo, forceRealm)
-    if not forceRealm and characterInfo.Realm == GetNormalizedRealmName() then
-        return characterInfo.Name
+    local characterName = characterInfo.Name
+    return Notes.AppendRealm(characterName, characterInfo.Realm, forceRealm)
+end
+
+function Notes.AppendRealm(text, realm, force)
+
+    if force or realm ~= GetNormalizedRealmName() then
+        return format("%s-%s", text, realm)
     end
 
-    return format("%s-%s", characterInfo.Name, characterInfo.Realm)
+    return text
 end
 
 function Notes:OnCharacterSelected(characterInfo)

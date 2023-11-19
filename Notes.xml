@@ -55,6 +55,11 @@
                 <FontString parentKey="Label" inherits="GameFontHighlight_NoShadow" justifyH="LEFT">
                     <Size y="12"/>
                 </FontString>
+                <Texture parentKey="NoteIcon" atlas="perks-forwardarrow" useAtlasSize="true" hidden="true">
+                    <Anchors>
+                        <Anchor point="RIGHT" x="0" y="0"/>
+                    </Anchors>
+                </Texture>
             </Layer>
             <Layer level="OVERLAY" textureSubLevel="2">
                 <Texture parentKey="SelectedOverlay" atlas="Professions_Recipe_Active" useAtlasSize="true" hidden="true">
