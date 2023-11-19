@@ -102,6 +102,13 @@
     "string",
     "Add",
     "AddonCompartmentFrame",
-    "DISABLED_FONT_COLOR"
+    "DISABLED_FONT_COLOR",
+    "EJ_SelectInstance",
+    "EJ_GetInstanceInfo",
+    "GetDifficultyInfo",
+    "C_EncounterJournal",
+    "EJ_GetEncounterInfoByIndex",
+    "GetNormalizedRealmName",
+    "AdventureGuideUtil"
   ]
 }

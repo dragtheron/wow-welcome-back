@@ -562,6 +562,11 @@ function HaveWeMet.GetActivityTitle(activity)
   end
 end
 
+function HaveWeMet.GetSelectedInstanceId()
+  local mapId = select(10, EJ_GetInstanceInfo())
+  return C_EncounterJournal.GetInstanceForGameMap(mapId) or nil
+end
+
 function HaveWeMet.GetEncounters(instanceId)
   if HaveWeMet.cache["encounters:" .. instanceId] then
     return HaveWeMet.cache["encounters:" .. instanceId]
@@ -573,6 +578,7 @@ function HaveWeMet.GetEncounters(instanceId)
     return {}
   end
 
+  local currentInstanceId = HaveWeMet.GetSelectedInstanceId()
   EJ_SelectInstance(journalInstanceId)
 
   HaveWeMet.cache["encounters:" .. instanceId] = {}
@@ -593,6 +599,10 @@ function HaveWeMet.GetEncounters(instanceId)
     table.insert(HaveWeMet.cache["encounters:" .. instanceId], encounterInfo)
   end
 
+  if currentInstanceId then
+    EJ_SelectInstance(currentInstanceId)
+  end
+
   return HaveWeMet.cache["encounters:" .. instanceId]
 end
 
@@ -603,16 +613,25 @@ function HaveWeMet.GetEncounterTitleFromJournal(instanceId, encounterId)
     return "Unknown"
   end
 
+  local currentInstanceId = HaveWeMet.GetSelectedInstanceId()
   EJ_SelectInstance(journalInstanceId)
 
   for index = 1, 20 do
     local name, _, _, _, _, _, dungeonEncounterId = EJ_GetEncounterInfoByIndex(index)
 
     if not name then
+      if currentInstanceId then
+        EJ_SelectInstance(currentInstanceId)
+      end
+
       return "Unknown"
     end
 
     if dungeonEncounterId == encounterId then
+      if currentInstanceId then
+        EJ_SelectInstance(currentInstanceId)
+      end
+
       return name
     end
   end
@@ -625,8 +644,15 @@ function HaveWeMet.GetInstanceName(instanceId)
     return "Unknown"
   end
 
+  local currentInstanceId = HaveWeMet.GetSelectedInstanceId()
   EJ_SelectInstance(journalInstanceId)
-  return EJ_GetInstanceInfo()
+  local name = EJ_GetInstanceInfo()
+
+  if currentInstanceId then
+    EJ_SelectInstance(currentInstanceId)
+  end
+
+  return name
 end
 
 function HaveWeMet.GetDifficultyName(difficultyId)
