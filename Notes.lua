@@ -751,6 +751,18 @@ function Notes:ShowFrame()
     ShowUIPanel(self.frame)
 end
 
+function Notes:HideFrame()
+    HideUIPanel(self.frame)
+end
+
+function WelcomeBack_ToggleNotesFrame()
+    if Notes.frame:IsShown() then
+        Notes:HideFrame()
+    else
+        Notes:ShowFrame()
+    end
+end
+
 function Notes.OnEvent(self, event, ...)
     if event == "VARIABLES_LOADED" then
         if not self.initialized then
@@ -979,6 +991,7 @@ function Notes.OnActivityUpdate()
             end
         else
             Notes.frame.Header.Label:SetShown(false)
+            Notes.frame.Header.Progress:SetShown(false)
         end
     end)
 end

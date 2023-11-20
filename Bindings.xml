@@ -1,0 +1,5 @@
+<Bindings>
+  <Binding category="Welcome Back" name="WELCOMEBACK_TOGGLE_NOTES" header="WELCOMEBACK">
+    WelcomeBack_ToggleNotesFrame()
+  </Binding>
+</Bindings>

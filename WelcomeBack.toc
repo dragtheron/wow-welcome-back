@@ -19,3 +19,4 @@ Overlay.lua
 
 Commands.lua
 Compartment.lua
+Bindings.lua

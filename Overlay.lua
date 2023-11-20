@@ -2,7 +2,7 @@ local addonName, addon = ...
 
 local frame = CreateFrame("Frame", "WelcomeBack_Overlay", UIParent)
 frame:SetPoint("TOPLEFT", 40, -40)
-frame:SetSize(300, 40)
+frame:SetSize(600, 40)
 frame:SetShown(false)
 
 frame.ActivityLine = frame:CreateFontString(nil, "BACKGROUND", "GameFontNormalSmall")
