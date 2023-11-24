@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
+## [1.3.0](https://git.tsno.de/dragtheron/wow-welcome-back/tags/1.3.0) - 2023-11-24
+
+<small>[Compare with 1.2.0](https://git.tsno.de/dragtheron/wow-welcome-back/compare/1.2.0...1.3.0)</small>
+
+### Features
+
+- added indicator for characters with notes ([6251136](https://git.tsno.de/dragtheron/wow-welcome-back/commit/6251136727160f01d2506f37dec345f16ff3ed7d) by Tobias Stettner).
+- store latest guild of character ([ffd9f2c](https://git.tsno.de/dragtheron/wow-welcome-back/commit/ffd9f2c0cfc01f76ad669e5c74198fa2e90df76f) by Tobias Stettner).
+- use keystone data to track m+ dungeons ([8407c1c](https://git.tsno.de/dragtheron/wow-welcome-back/commit/8407c1c5e929e5c25899fce0a2b078af3d62ea03) by Tobias Stettner).
+- add key bindings for character history ([150b53b](https://git.tsno.de/dragtheron/wow-welcome-back/commit/150b53bb94b7832fdbff22086a9292596842a136) by Tobias Stettner).
+- class color names in list ([75a981f](https://git.tsno.de/dragtheron/wow-welcome-back/commit/75a981f7f53a5fb88b1068091fe8771371c03b08) by Tobias Stettner).
+
+### Bug Fixes
+
+- retain selected encounter journal page ([d8bb9b2](https://git.tsno.de/dragtheron/wow-welcome-back/commit/d8bb9b28d6aee80f082d2557ae1d7e4f8c6a5dbe) by Tobias Stettner).
+
 ## [1.2.0](https://git.tsno.de/dragtheron/wow-welcome-back/tags/1.2.0) - 2023-11-17
 
 <small>[Compare with 1.2.0-beta4](https://git.tsno.de/dragtheron/wow-welcome-back/compare/1.2.0-beta4...1.2.0)</small>
