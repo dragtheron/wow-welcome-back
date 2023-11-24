@@ -243,6 +243,8 @@ function WelcomeBack_NotesCharacterMixin:Init(node)
     self.highlight = (elementData.characterInfo.Known and elementData.highlightKnown)
         or (elementData.characterInfo.InGroup and elementData.highlightCurrentGroupMembers)
 
+    local hasNote = elementData.characterInfo.Note and elementData.characterInfo.Note ~= ""
+    self.NoteIcon:SetShown(hasNote)
     self.Label:SetAlpha(self.highlight and 1.0 or 0.5)
 end
 
@@ -608,8 +610,13 @@ function characterDetails:Refresh()
         self.Summary.ActivitiesCounter:SetText("|cff888888Character is not known yet.|r")
     end
 
-    self.Note.EditBox:SetDefaultTextEnabled(true)
-    self.Note.EditBox:SetText(characterData.Note or "")
+
+    if characterInfo ~= self.characterInfo then
+        self.Note.EditBox:SetDefaultTextEnabled(true)
+        self.Note.EditBox:SetText(characterData.Note or "")
+    end
+
+    self.characterInfo = characterInfo
     self.Note:SetShown(#activities > 0)
 end
 
@@ -719,7 +726,7 @@ function activitiesFrame:StoreCollapses(scrollbox)
     local childrenNodes = dataProvider:GetChildrenNodes()
 
     for _, child in ipairs(childrenNodes) do
-        if child.data and child:IsCollapsed() then
+        if child.data and child:IsCollapsed() and child.data.activityInfo then
             self.collapses[child.data.activityInfo.index] = true
         end
     end
@@ -758,7 +765,7 @@ end
 
 function Notes:Refresh()
     if self.selectedCharacterInfo then
-        self.frame.Activities:StoreCollapses(activitiesFrame.ScrollBox)
+        activitiesFrame:StoreCollapses(activitiesFrame.ScrollBox)
     end
 
     self:Init()

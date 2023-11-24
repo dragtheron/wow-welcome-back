@@ -55,9 +55,10 @@
                 <FontString parentKey="Label" inherits="GameFontHighlight_NoShadow" justifyH="LEFT">
                     <Size y="12"/>
                 </FontString>
-                <Texture parentKey="NoteIcon" atlas="perks-forwardarrow" useAtlasSize="true" hidden="true">
+                <Texture parentKey="NoteIcon" atlas="Class" useAtlasSize="false" hidden="true">
+                    <Size x="16" y="16"/>
                     <Anchors>
-                        <Anchor point="RIGHT" x="0" y="0"/>
+                        <Anchor point="RIGHT" x="-12" y="0"/>
                     </Anchors>
                 </Texture>
             </Layer>
