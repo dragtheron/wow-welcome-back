@@ -286,6 +286,7 @@ function WelcomeBack_NotesActivityMixin:Init(node)
 end
 
 function WelcomeBack_NotesActivityMixin:OnEnter(node)
+    self.Label:SetFontObject(GameFontHighlight_NoShadow)
     local elementData = self:GetElementData()
     local activityInfo = elementData.data.activityInfo
     local activityDate = addon.HaveWeMet.GetDateString(activityInfo.Time)
@@ -579,20 +580,25 @@ summaryFrame.CharacterName = summaryFrame:CreateFontString(nil, "ARTWORK", "Game
 summaryFrame.CharacterName:SetHeight(20)
 summaryFrame.CharacterName:SetPoint("TOPLEFT", 16, -16)
 summaryFrame.CharacterRealm = summaryFrame:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
-summaryFrame.CharacterRealm:SetHeight(20)
-summaryFrame.CharacterRealm:SetPoint("TOPLEFT", summaryFrame.CharacterName, "BOTTOMLEFT", 0, -8)
+summaryFrame.CharacterRealm:SetHeight(16)
+summaryFrame.CharacterRealm:SetPoint("TOPLEFT", summaryFrame.CharacterName, "BOTTOMLEFT", 0, -4)
+summaryFrame.CharacterGuild = summaryFrame:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+summaryFrame.CharacterGuild:SetHeight(16)
+summaryFrame.CharacterGuild:SetPoint("TOPLEFT", summaryFrame.CharacterRealm, "BOTTOMLEFT", 0, -1)
+summaryFrame.CharacterGuild:SetTextColor(0, 1, 0)
 summaryFrame.ActivitiesCounter = summaryFrame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
 summaryFrame.ActivitiesCounter:SetHeight(20)
-summaryFrame.ActivitiesCounter:SetPoint("TOPLEFT", summaryFrame.CharacterRealm, "BOTTOMLEFT", 0, -8)
+summaryFrame.ActivitiesCounter:SetPoint("TOPLEFT", summaryFrame.CharacterGuild, "BOTTOMLEFT", 0, -8)
 summaryFrame.ActivitiesCounter:SetHeight(20)
 
 characterDetails.Summary = summaryFrame
 
 function characterDetails:Refresh()
     local characterInfo = Notes.selectedCharacterInfo
+
     self.Summary.CharacterName:SetText(Notes.GetColoredName(characterInfo))
     self.Summary.CharacterRealm:SetText(characterInfo.Realm)
-
+    self.Summary.CharacterGuild:SetText(characterInfo.Guild)
     local characterData = Dragtheron_WelcomeBack.KnownCharacters[characterInfo.Id]
     local activities = characterData.Activities
 
@@ -829,6 +835,8 @@ function Notes:GenerateCharacterDataProvider()
             Name = characterData.CharacterInfo.Name,
             Realm = characterData.CharacterInfo.Realm,
             ClassFilename = characterData.CharacterInfo.ClassFilename,
+            Guild = characterData.CharacterInfo.Guild,
+            Note = characterData.Note,
             Id = characterId,
         }
 

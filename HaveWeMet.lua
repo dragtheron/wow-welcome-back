@@ -63,6 +63,7 @@ function HaveWeMet:CheckCharacters()
     if UnitExists(unit) then
       local name, realm = UnitNameUnmodified(unit)
       local guid = UnitGUID(unit)
+      local guild = GetGuildInfo(unit)
       local classFilename = UnitClassBase(unit)
 
       if name ~= UNKNOWNOBJECT then
@@ -75,6 +76,7 @@ function HaveWeMet:CheckCharacters()
           guid = guid,
           name = name,
           realm = realm,
+          guild = guild,
           classFilename = classFilename,
         }
 
@@ -184,6 +186,7 @@ function HaveWeMet:RegisterCharacter(character)
     Name = character.name,
     Realm = character.realm,
     ClassFilename = character.classFilename,
+    Guild = character.guild,
   }
 
   if knownCharacter then
