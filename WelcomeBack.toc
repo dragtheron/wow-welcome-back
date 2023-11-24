@@ -12,6 +12,8 @@
 ## X-Website: https://git.tsno.de/dragtheron/wow-welcome-back
 ## X-Curse-Project-ID: 895385
 
+Keystones.xml
+
 HaveWeMet.lua
 
 Notes.xml

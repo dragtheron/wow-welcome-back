@@ -157,7 +157,7 @@ local function addTreeDataForActivityCategory(categoryInfo, node, collapses)
 
         local uniqueEncounters = {}
 
-        local expectedEncounters = addon.HaveWeMet.GetEncounters(activityInfo.Activity.Id)
+        local expectedEncounters = addon.HaveWeMet.GetEncounters(activityInfo.Activity)
 
         if expectedEncounters then
             for _, encounter in ipairs(expectedEncounters) do
@@ -293,10 +293,22 @@ function WelcomeBack_NotesActivityMixin:OnEnter(node)
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
     GameTooltip:AddLine(activityTitle)
     GameTooltip:AddLine(activityDate, 1, 1, 1)
+
+    local completedInfo = addon.HaveWeMet.GetCompletedInfo(activityInfo)
+
+    if completedInfo then
+        if completedInfo.OnTime then
+            GameTooltip:AddLine(format("|cff00ff00%s +%d|r", "Timed", completedInfo.KeystoneUpgradeLevels))
+        else
+            GameTooltip:AddLine(format("|cffff0000%s|r", "Not Timed"))
+        end
+    end
+
     GameTooltip:Show()
 end
 
 function WelcomeBack_NotesActivityMixin:OnLeave(node)
+    self.Label:SetFontObject(GameFontNormal_NoShadow)
     GameTooltip:Hide()
 end
 
@@ -903,7 +915,7 @@ function Notes:GenerateActivitiesDataProvider(collapses)
 
         activity.index = i
 
-        if activity.AdditionalInfo.Instance.Type == "raid" then
+        if activity.Activity.Type == "raid" then
             if #raidActivities > 0 then
                 activityInfo.collapsed = true
             end

@@ -34,6 +34,11 @@ local function onUpdate()
 
     if lastActivity then
         local activityName = addon.HaveWeMet.GetActivityTitle(lastActivity)
+
+        if lastActivity.ChallengeModeId then
+            activityName = activityName .. format(" (CMID %s)", lastActivity.ChallengeModeId)
+        end
+
         frame.ActivityLine:SetText(format("Current Activity: |cffffffff%s|r", activityName))
         frame.ActivityLine:SetShown(true)
 

@@ -114,6 +114,9 @@
     "select",
     "UnitClassBase",
     "RAID_CLASS_COLORS",
-    "GetColoredName"
+    "GetColoredName",
+    "HideUIPanel",
+    "exp",
+    "GetGuildInfo"
   ]
 }
