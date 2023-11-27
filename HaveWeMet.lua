@@ -191,6 +191,7 @@ function HaveWeMet:RegisterCharacter(character)
 
   if knownCharacter then
     knownCharacter.CharacterInfo = characterInfo
+    return knownCharacter
   else
     Dragtheron_WelcomeBack.KnownCharacters[character.guid] = {
       ["CharacterInfo"] = characterInfo,
@@ -210,7 +211,7 @@ function HaveWeMet:AddToGroup(character)
 end
 
 function HaveWeMet:CheckCharacter(character)
-  self:RegisterCharacter(character)
+  local knownCharacter = self:RegisterCharacter(character)
 
   if self:IsInGroup(character) then
     return
