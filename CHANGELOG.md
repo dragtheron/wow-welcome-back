@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
+## [1.3.1](https://git.tsno.de/dragtheron/wow-welcome-back/tags/1.3.1) - 2023-11-27
+
+<small>[Compare with 1.3.0](https://git.tsno.de/dragtheron/wow-welcome-back/compare/1.3.0...1.3.1)</small>
+
+### Bug Fixes
+
+- display chat message for known player joining the group ([d4b4343](https://git.tsno.de/dragtheron/wow-welcome-back/commit/d4b4343e9d2461e7546518da9cdc4d2eaeb592e0) by Tobias Stettner).
+
 ## [1.3.0](https://git.tsno.de/dragtheron/wow-welcome-back/tags/1.3.0) - 2023-11-24
 
 <small>[Compare with 1.2.0](https://git.tsno.de/dragtheron/wow-welcome-back/compare/1.2.0...1.3.0)</small>
