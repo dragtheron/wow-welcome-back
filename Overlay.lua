@@ -40,7 +40,7 @@ local function onUpdate()
         end
 
         if lastActivity.SaveId then
-            activityName = activityName .. format(" (Save ID %s)", lastActivity.SaveId)
+            activityName = activityName .. format(" (ID %s)", lastActivity.SaveId)
         end
 
         frame.ActivityLine:SetText(format("Current Activity: |cffffffff%s|r", activityName))

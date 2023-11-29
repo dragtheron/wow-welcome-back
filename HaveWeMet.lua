@@ -59,6 +59,14 @@ function HaveWeMet:MatchingRaidLockout(savedInstanceIndex, activity)
     and savedInstance.difficultyId == activity.DifficultyId
 end
 
+function HaveWeMet:IsCurrentLockout(activity)
+  for _, savedInstance in ipairs(self.savedInstances) do
+    if savedInstance.saveId == activity.SaveId then
+      return true
+    end
+  end
+end
+
 function HaveWeMet:CheckCharacters()
   local units = {}
   local numGroupMembers = GetNumGroupMembers()
@@ -134,10 +142,15 @@ function HaveWeMet:AddActivity(guid, activity)
   end
 
   if activity.Type == "raid" then
-    for i = #characterInfo.Activities, -1, 1 do
+    for i = #characterInfo.Activities, 1, -1 do
       local knownActivity = characterInfo.Activities[i]
 
       if HaveWeMet.IsEqualActivity(knownActivity, activity) then
+
+        if not knownActivity.SaveId then
+          knownActivity.SaveId = activity.SaveId
+        end
+
         characterInfo.currentActivityIndex = i
         return
       end
@@ -410,7 +423,13 @@ function HaveWeMet.GetRaidDetailsString(activity, showLootable)
     local encounterLocked = false
 
     if savedInstanceIndex then
-      encounterLocked = select(3, GetSavedInstanceEncounterInfo(savedInstanceIndex, encounterIndex))
+      for i = 1, addon.HaveWeMet.savedInstances[savedInstanceIndex].numEncounters do
+        local bossName, _, locked = GetSavedInstanceEncounterInfo(savedInstanceIndex, i)
+
+        if bossName == expectedEncounterData.Name then
+          encounterLocked = locked
+        end
+      end
     end
 
     if encounterCompleted then
@@ -584,12 +603,14 @@ function HaveWeMet:OnInstanceInfoUpdate()
   for i = 1, GetNumSavedInstances() do
     local _, saveId, reset, difficultyId = GetSavedInstanceInfo(i)
     local instanceId = select(14, GetSavedInstanceInfo(i))
+    local numEncounters = select(11, GetSavedInstanceInfo(i))
 
     if reset > 0 then
       local lockoutInfo = {
         instanceId = instanceId,
         difficultyId = difficultyId,
         saveId = saveId,
+        numEncounters = numEncounters
       }
 
       table.insert(savedInstances, lockoutInfo)
@@ -612,7 +633,7 @@ function HaveWeMet:OnEncounterEnd(encounterId, difficultyId, success, time)
 
   if self.lastActivity and self.lastActivity.Type == "raid" then
     -- delay saving encounter data after first pull to the include save id
-    if not self.lastActivity.SaveId then
+    if success and not self.lastActivity.SaveId then
       self:RequestLockoutInfo()
       C_Timer.After(5, function()
         HaveWeMet.OnEncounterEnd(self, encounterId, difficultyId, success, time)
