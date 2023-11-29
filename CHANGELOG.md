@@ -6,9 +6,37 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
+## [1.4.0](https://git.tsno.de/dragtheron/wow-welcome-back/tags/1.4.0) - 2023-11-29
+
+<small>[Compare with 1.4.0-alpha1](https://git.tsno.de/dragtheron/wow-welcome-back/compare/1.4.0-alpha1...1.4.0)</small>
+
+### Features
+
+- introduce own activity section for current raid lockouts ([2096ef6](https://git.tsno.de/dragtheron/wow-welcome-back/commit/2096ef650e697ca6c8981caadaaab38ce7609f4a) by Tobias Stettner).
+- add counter to activity categories ([d16f9d7](https://git.tsno.de/dragtheron/wow-welcome-back/commit/d16f9d76170ae36c7393f683c4df48d904551c7c) by Tobias Stettner).
+- display defeat status alongside encounter times in tooltip ([7642854](https://git.tsno.de/dragtheron/wow-welcome-back/commit/7642854d9099c25a4d778a3ea34bb27f34666d3a) by Tobias Stettner).
+- show tooltips for current activity encounters ([45922ce](https://git.tsno.de/dragtheron/wow-welcome-back/commit/45922cec72228c3923f91bf3349900c27c763f0d) by Tobias Stettner).
+- indicate bosses with locked loot id ([1fad347](https://git.tsno.de/dragtheron/wow-welcome-back/commit/1fad347f93ed8042f8510ad0c7a6c2597d2bb76c) by Tobias Stettner).
+
+### Bug Fixes
+
+- retain collapse state of character activities ([49f8271](https://git.tsno.de/dragtheron/wow-welcome-back/commit/49f82719ecf8a50c242cd6a5be6298c9e28ce585) by Tobias Stettner).
+
+## [1.4.0-alpha1](https://git.tsno.de/dragtheron/wow-welcome-back/tags/1.4.0-alpha1) - 2023-11-29
+
+<small>[Compare with 1.3.1](https://git.tsno.de/dragtheron/wow-welcome-back/compare/1.3.1...1.4.0-alpha1)</small>
+
+### Features
+
+- track save id to join activities of the same lockout ([c16a220](https://git.tsno.de/dragtheron/wow-welcome-back/commit/c16a2206f86f42362ca13a5f38177f6c49b3d3ee) by Tobias Stettner).
+
 ## [1.3.1](https://git.tsno.de/dragtheron/wow-welcome-back/tags/1.3.1) - 2023-11-27
 
 <small>[Compare with 1.3.0](https://git.tsno.de/dragtheron/wow-welcome-back/compare/1.3.0...1.3.1)</small>
+
+### Features
+
+- update changelog ([d8faabe](https://git.tsno.de/dragtheron/wow-welcome-back/commit/d8faabef73e8d7188725af10ce5a99470591ae44) by Tobias Stettner).
 
 ### Bug Fixes
 
