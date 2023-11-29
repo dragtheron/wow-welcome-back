@@ -401,6 +401,20 @@ header.Progress:SetPoint("RIGHT", 0, 0)
 header.Progress:SetJustifyH("RIGHT")
 header.Progress:SetText("...")
 
+header:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_BOTTOMRIGHT")
+
+    if self.currentActivity then
+        addon.HaveWeMet.GetDetailsTooltip(GameTooltip, self.currentActivity, true)
+    end
+
+    GameTooltip:Show()
+end)
+
+header:SetScript("OnLeave", function()
+    GameTooltip:Hide()
+end)
+
 mainFrame.Header = header
 
 local characterList = CreateFrame("Frame", "$parentCharacters", mainFrame)
@@ -1007,6 +1021,7 @@ function Notes.OnActivityUpdate()
                 Encounters = {},
             }, true)
 
+            Notes.frame.Header.currentActivity = lastActivity
             Notes.frame.Header.Progress:SetText(defaultDetailsString)
 
             local playerGUID = UnitGUID("player")
@@ -1017,6 +1032,7 @@ function Notes.OnActivityUpdate()
 
                 if addon.HaveWeMet.IsEqualActivity(playerLastActivity.Activity, lastActivity) then
                     local detailsString = addon.HaveWeMet.GetDetailsString(playerLastActivity, true)
+                    Notes.frame.Header.currentActivity = playerLastActivity
                     Notes.frame.Header.Progress:SetText(detailsString)
                 end
             end

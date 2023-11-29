@@ -19,6 +19,20 @@ frame.ActivityProgress:SetHeight(16)
 frame.ActivityProgress:SetText("...")
 frame.ActivityProgress:SetJustifyH("LEFT")
 
+local currentActivity
+
+frame:SetScript("OnEnter", function()
+    GameTooltip:SetOwner(frame, "ANCHOR_TOPRIGHT")
+
+    if currentActivity then
+        addon.HaveWeMet.GetDetailsTooltip(GameTooltip, currentActivity, true)
+    end
+
+    GameTooltip:Show()
+end)
+
+frame:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
 frame:SetScript("OnEvent", function(self, event)
     if event == "VARIABLES_LOADED" then
         if Dragtheron_WelcomeBack.Settings then
@@ -51,6 +65,11 @@ local function onUpdate()
             Encounters = {},
         }, true)
 
+        currentActivity = {
+            Activity = lastActivity,
+            Encounters = {},
+        }
+
         frame.ActivityProgress:SetText(defaultDetailsString)
 
         local playerGUID = UnitGUID("player")
@@ -61,6 +80,7 @@ local function onUpdate()
 
             if addon.HaveWeMet.IsEqualActivity(playerLastActivity.Activity, lastActivity) then
                 local detailsString = addon.HaveWeMet.GetDetailsString(playerLastActivity, true)
+                currentActivity = playerLastActivity
                 frame.ActivityProgress:SetText(detailsString)
             end
 
@@ -69,6 +89,7 @@ local function onUpdate()
             frame.ActivityProgress:SetShown(false)
         end
 
+        frame.ActivityProgress:SetShown(true)
         frame.ActivityLine:SetShown(true)
     else
         frame.ActivityLine:SetShown(false)

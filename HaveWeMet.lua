@@ -454,6 +454,75 @@ function HaveWeMet.GetRaidDetailsString(activity, showLootable)
   end
 end
 
+function HaveWeMet.GetRaidDetailsTooltip(tooltip, activity, showLootable)
+  local expectedEncounters = HaveWeMet.GetEncounters(activity.Activity)
+  local outputString = ""
+  local deaths = 0
+  local savedInstanceIndex = nil
+
+  tooltip:AddLine(HaveWeMet.GetActivityTitle(activity.Activity))
+
+  if activity.Activity.SaveId then
+    tooltip:AddDoubleLine(format("Total wipes: %d", deaths), format("ID %d", activity.Activity.SaveId))
+  end
+
+  if activity.Activity.Type == "raid" and showLootable then
+    for i = 1, #HaveWeMet.savedInstances do
+      if addon.HaveWeMet:MatchingRaidLockout(i, activity.Activity) then
+        savedInstanceIndex = i
+      end
+    end
+  end
+
+  for _, expectedEncounterData in ipairs(expectedEncounters) do
+    local encounterCompleted = false
+    local encounterTried = false
+
+    for _, encounter in ipairs(activity.Encounters) do
+      if tonumber(encounter.Id) == expectedEncounterData.Id then
+        encounterTried = true
+
+        if encounter.Success == 1 then
+          encounterCompleted = true
+        else
+          deaths = deaths + 1
+        end
+      end
+    end
+
+    local encounterLocked = false
+
+    if savedInstanceIndex then
+      for i = 1, addon.HaveWeMet.savedInstances[savedInstanceIndex].numEncounters do
+        local bossName, _, locked = GetSavedInstanceEncounterInfo(savedInstanceIndex, i)
+
+        if bossName == expectedEncounterData.Name then
+          encounterLocked = locked
+        end
+      end
+    end
+
+    local color = {}
+
+    if encounterCompleted then
+       outputString = "Defeated"
+       color = { 0, 255, 0 }
+    elseif encounterLocked and showLootable then
+      outputString = "Not Lootable"
+      color = { 255, 0, 0 }
+    else
+      if encounterTried then
+        outputString = "Failed"
+        color = { 255, 0, 0 }
+      else
+        outputString = "Alive"
+      end
+    end
+
+    tooltip:AddDoubleLine(expectedEncounterData.Name, outputString, 1, 1, 1, color[1], color[2], color[3])
+  end
+end
+
 function HaveWeMet.GetKillsWipesCountString(kills, wipes)
   local deathIcon = "|A:poi-graveyard-neutral:16:12|a"
   local defeatIcon = "|A:UI-QuestTracker-Tracker-Check:16:16|a"
@@ -500,6 +569,14 @@ function HaveWeMet.GetDetailsString(activity, showLootable)
   end
 
   return HaveWeMet.GetGenericDetailsString(activity)
+end
+
+function HaveWeMet.GetDetailsTooltip(tooltip, activity, showLootable)
+  local expectedEncounters = HaveWeMet.GetEncounters(activity.Activity)
+
+  if #expectedEncounters > 0 then
+    return HaveWeMet.GetRaidDetailsTooltip(tooltip, activity, showLootable)
+  end
 end
 
 function HaveWeMet.AddActivityLine(tooltip, activity)
