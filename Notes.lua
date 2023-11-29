@@ -103,10 +103,6 @@ local function addTreeDataForCategory(categoryInfo, node)
     local skipSort = false
     -- categoryNode:SetSortComparator(sortCategoryData, affectChildren, skipSort)
 
-    if categoryInfo.collapsed then
-        categoryNode:SetCollapsed(true)
-    end
-
     categoryNode:Insert({topPadding=true, order = -1});
 
     for _, characterInfo in ipairs(categoryInfo.characters) do
@@ -116,10 +112,6 @@ local function addTreeDataForCategory(categoryInfo, node)
             highlightKnown = categoryInfo.highlightKnown,
             highlightCurrentGroupMembers = categoryInfo.highlightCurrentGroupMembers,
         })
-
-        if characterInfo.collapsed then
-            categoryNode:SetCollapsed(true)
-        end
     end
 
     categoryNode:Insert({topPadding=true, order = -1});
@@ -137,22 +129,22 @@ local function addTreeDataForActivityCategory(categoryInfo, node, collapses)
     local skipSort = false
     -- categoryNode:SetSortComparator(sortCategoryData, affectChildren, skipSort)
 
-    if categoryInfo.collapsed then
+    if collapses then
+        categoryNode:SetCollapsed(collapses.categories[categoryInfo.index])
+    else
         categoryNode:SetCollapsed(true)
     end
 
-    categoryNode:Insert({topPadding=true, order = -1});
+    categoryNode:Insert({ topPadding=true, order = -1 });
 
     for _, activityInfo in ipairs(categoryInfo.activities) do
         local activityNode = categoryNode:Insert({ activityInfo = activityInfo, order = 0 })
         activityNode:SetSortComparator(sortEncounterData, affectChildren, skipSort)
 
-        if collapses and collapses[activityInfo.index] then
-            activityNode:SetCollapses(true)
+        if collapses then
+            activityNode:SetCollapsed(collapses.activities[activityInfo.index])
         else
-            if activityInfo.collapsed then
-                activityNode:SetCollapsed(true)
-            end
+            activityNode:SetCollapsed(true)
         end
 
         local uniqueEncounters = {}
@@ -739,13 +731,23 @@ activitiesListView:SetElementExtentCalculator(function(_, node)
 end)
 
 function activitiesFrame:StoreCollapses(scrollbox)
-    self.collapses = {}
-    local dataProvider = scrollbox:GetDataProvider()
-    local childrenNodes = dataProvider:GetChildrenNodes()
+    self.collapses = {
+        categories = {},
+        activities = {},
+    }
 
-    for _, child in ipairs(childrenNodes) do
-        if child.data and child:IsCollapsed() and child.data.activityInfo then
-            self.collapses[child.data.activityInfo.index] = true
+    local dataProvider = scrollbox:GetDataProvider()
+    local categoryNodes = dataProvider:GetChildrenNodes()
+
+    for _, categoryNode in ipairs(categoryNodes) do
+        if categoryNode.data and categoryNode:IsCollapsed() and categoryNode.data.categoryInfo then
+            self.collapses.categories[categoryNode.data.categoryInfo.index] = true
+        end
+
+        for _, activityNode in ipairs(categoryNode.nodes) do
+            if activityNode.data and activityNode:IsCollapsed() and activityNode.data.activityInfo then
+                self.collapses.activities[activityNode.data.activityInfo.index] = true
+            end
         end
     end
 end
@@ -949,31 +951,25 @@ function Notes:GenerateActivitiesDataProvider(collapses)
         activity.index = i
 
         if activity.Activity.Type == "raid" then
-            if #raidActivities > 0 then
+            if addon.HaveWeMet:IsCurrentLockout(activity.Activity) then
+                table.insert(currentRaidActivities, activityInfo)
+            else
                 activityInfo.collapsed = true
+                table.insert(oldRaidActivities, activityInfo)
             end
-
-            table.insert(raidActivities, activityInfo)
         elseif activity.Activity.KeystoneLevel then
-            if #keystoneActivities > 0 then
-                activityInfo.collapsed = true
-            end
-
             table.insert(keystoneActivities, activityInfo)
         else
-            if #genericActivities > 0 then
-                activityInfo.collapsed = true
-            end
-
             table.insert(genericActivities, activity)
         end
     end
 
-    raidActivityInfo.activities = raidActivities
+    currentRaidActivityInfo.activities = currentRaidActivities
+    oldRaidActivityInfo.activities = oldRaidActivities
     keystoneActivityInfo.activities = keystoneActivities
     genericActivityInfo.activities = genericActivities
 
-    local categories = { raidActivityInfo, keystoneActivityInfo, genericActivityInfo }
+    local categories = { currentRaidActivityInfo, oldRaidActivityInfo, keystoneActivityInfo, genericActivityInfo }
 
     local node = dataProvider:GetRootNode()
     local affectChildren = false
