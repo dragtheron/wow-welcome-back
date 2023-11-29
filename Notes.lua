@@ -930,26 +930,37 @@ function Notes:GenerateActivitiesDataProvider(collapses)
         return dataProvider
     end
 
-    local raidActivities = {}
+    local currentRaidActivities = {}
+    local oldRaidActivities = {}
     local keystoneActivities = {}
     local genericActivities = {}
 
-    local raidActivityInfo = {
-        name = "Raids",
+    local currentRaidActivityInfo = {
+        name = "Current Raids",
         uiOrder = 0,
         group = ActivityGroup.Raids,
+        index = 1,
+    }
+
+    local oldRaidActivityInfo = {
+        name = "Expired Raids",
+        uiOrder = 1,
+        group = ActivityGroup.Raids,
+        index = 2,
     }
 
     local keystoneActivityInfo = {
         name = "Mythic Keystone Dungeons",
-        uiOrder = 1,
+        uiOrder = 2,
         group = ActivityGroup.Keystones,
+        index = 3,
     }
 
     local genericActivityInfo = {
         name = "Other Activities",
-        uiOrder = 2,
+        uiOrder = 3,
         group = ActivityGroup.Generic,
+        index = 4,
     }
     for i = #characterData.Activities, 1, -1 do
         local activity = characterData.Activities[i]
