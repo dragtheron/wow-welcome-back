@@ -39,13 +39,17 @@ local function onUpdate()
             activityName = activityName .. format(" (CMID %s)", lastActivity.ChallengeModeId)
         end
 
+        if lastActivity.SaveId then
+            activityName = activityName .. format(" (Save ID %s)", lastActivity.SaveId)
+        end
+
         frame.ActivityLine:SetText(format("Current Activity: |cffffffff%s|r", activityName))
         frame.ActivityLine:SetShown(true)
 
         local defaultDetailsString = addon.HaveWeMet.GetDetailsString({
             Activity = lastActivity,
             Encounters = {},
-        })
+        }, true)
 
         frame.ActivityProgress:SetText(defaultDetailsString)
 
@@ -56,7 +60,7 @@ local function onUpdate()
             local playerLastActivity = playerProgress.Activities[#playerProgress.Activities]
 
             if addon.HaveWeMet.IsEqualActivity(playerLastActivity.Activity, lastActivity) then
-                local detailsString = addon.HaveWeMet.GetDetailsString(playerLastActivity)
+                local detailsString = addon.HaveWeMet.GetDetailsString(playerLastActivity, true)
                 frame.ActivityProgress:SetText(detailsString)
             end
 

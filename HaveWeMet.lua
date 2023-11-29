@@ -6,6 +6,7 @@ local locale = GetLocale()
 local HaveWeMet = CreateFromMixins(CallbackRegistryMixin)
 HaveWeMet.loaded = false
 HaveWeMet.lastActivity = nil
+HaveWeMet.instanceInfoVersion = -1
 HaveWeMet.EncounterStart = 0
 HaveWeMet.cache = {}
 DT_HWM = HaveWeMet
@@ -31,14 +32,31 @@ end
 
 function HaveWeMet:RegisterActivity(type, id, keystoneLevel, difficultyId, challengeModeId)
   self.lastActivity = {
-    ["Type"] = type,
-    ["Id"] = id,
-    ["KeystoneLevel"] = keystoneLevel,
-    ["DifficultyId"] = difficultyId,
-    ["ChallengeModeId"] = challengeModeId,
+    Type = type,
+    Id = id,
+    KeystoneLevel = keystoneLevel,
+    DifficultyId = difficultyId,
+    ChallengeModeId = challengeModeId,
   }
 
+  if type == "raid" then
+    for i, savedInstance in ipairs(self.savedInstances) do
+      if self:MatchingRaidLockout(i, self.lastActivity) then
+        self.lastActivity.SaveId = savedInstance.saveId
+      end
+    end
+  end
+
   return self.lastActivity
+end
+
+function HaveWeMet:MatchingRaidLockout(savedInstanceIndex, activity)
+  local savedInstance = self.savedInstances[savedInstanceIndex]
+
+  return savedInstance
+    and activity.Type == "raid"
+    and savedInstance.instanceId == activity.Id
+    and savedInstance.difficultyId == activity.DifficultyId
 end
 
 function HaveWeMet:CheckCharacters()
@@ -109,16 +127,25 @@ function HaveWeMet.IsEqualActivity(a, b)
 end
 
 function HaveWeMet:AddActivity(guid, activity)
-  if not Dragtheron_WelcomeBack.KnownCharacters[guid] then
+  local characterInfo = Dragtheron_WelcomeBack.KnownCharacters[guid]
+
+  if not characterInfo then
     return
   end
 
-  local lastActivityId = #Dragtheron_WelcomeBack.KnownCharacters[guid].Activities
-  local lastActivity = Dragtheron_WelcomeBack.KnownCharacters[guid].Activities[lastActivityId]
+  if activity.Type == "raid" then
+    for i = #characterInfo.Activities, -1, 1 do
+      local knownActivity = characterInfo.Activities[i]
 
-  -- TODO: New Activity if older than a treshold
-  -- e.g. if one only plays one instance-difficulty combination (mythic raid only),
-  -- then all those events will be combined.
+      if HaveWeMet.IsEqualActivity(knownActivity, activity) then
+        characterInfo.currentActivityIndex = i
+        return
+      end
+    end
+  end
+
+  local lastActivityIndex = #characterInfo.Activities
+  local lastActivity = characterInfo.Activities[lastActivityIndex]
 
   if not lastActivity or not HaveWeMet.IsEqualActivity(lastActivity.Activity, activity) then
     Dragtheron_WelcomeBack.KnownCharacters[guid].DanglingActivity = {
@@ -126,21 +153,28 @@ function HaveWeMet:AddActivity(guid, activity)
       ["Activity"] = activity,
       ["Encounters"] = {},
     }
+
+    characterInfo.currentActivityIndex = nil
+    return
   end
+
+  characterInfo.currentActivityIndex = lastActivityIndex
 end
 
 function HaveWeMet:AddEncounter(guid, encounter)
-  if Dragtheron_WelcomeBack.KnownCharacters[guid].DanglingActivity then
+  local characterInfo = Dragtheron_WelcomeBack.KnownCharacters[guid]
+
+  if not characterInfo.currentActivityIndex and characterInfo.DanglingActivity then
     table.insert(
-      Dragtheron_WelcomeBack.KnownCharacters[guid].Activities,
-      Dragtheron_WelcomeBack.KnownCharacters[guid].DanglingActivity)
-    Dragtheron_WelcomeBack.KnownCharacters[guid].DanglingActivity = nil
+      characterInfo.Activities,
+      characterInfo.DanglingActivity)
+
+    characterInfo.DanglingActivity = nil
+    characterInfo.currentActivityIndex = #characterInfo.Activities
   end
 
-  local lastActivityIdx = #Dragtheron_WelcomeBack.KnownCharacters[guid].Activities
-
   table.insert(
-    Dragtheron_WelcomeBack.KnownCharacters[guid].Activities[lastActivityIdx].Encounters,
+    characterInfo.Activities[characterInfo.currentActivityIndex].Encounters,
     encounter)
 end
 
@@ -240,6 +274,10 @@ function HaveWeMet:AnnounceUpdate()
 end
 
 function HaveWeMet:OnEvent(event, ...)
+  if event == "PLAYER_ENTERING_WORLD" then
+    HaveWeMet:RequestLockoutInfo()
+  end
+
   if event == "VARIABLES_LOADED" then
     if Dragtheron_WelcomeBack == nil then
       Dragtheron_WelcomeBack = {}
@@ -287,6 +325,11 @@ function HaveWeMet:OnEvent(event, ...)
     return
   end
 
+  if event == "UPDATE_INSTANCE_INFO" then
+    HaveWeMet:OnInstanceInfoUpdate()
+    return
+  end
+
   if not self.loaded then
     return
   end
@@ -326,19 +369,29 @@ function HaveWeMet.GetDateString(time)
   return date("%c", time)
 end
 
-function HaveWeMet.GetRaidDetailsString(activity)
+function HaveWeMet.GetRaidDetailsString(activity, showLootable)
   local expectedEncounters = HaveWeMet.GetEncounters(activity.Activity)
   local outputString = ""
 
   local checkIcon = "|A:UI-QuestTracker-Tracker-Check:16:16|a"
   local failIcon = "|A:UI-QuestTracker-Objective-Fail:16:16|a"
   local nubIcon = "|A:UI-QuestTracker-Objective-Nub:16:16|a"
+  local lockedIcon = "|A:Forge-Lock:16:16|a"
   local deathIcon = "|A:poi-graveyard-neutral:16:12|a"
 
   local deaths = 0
   local allComplete = true
+  local savedInstanceIndex = nil
 
-  for _, expectedEncounterData in ipairs(expectedEncounters) do
+  if activity.Activity.Type == "raid" and showLootable then
+    for i = 1, #HaveWeMet.savedInstances do
+      if addon.HaveWeMet:MatchingRaidLockout(i, activity.Activity) then
+        savedInstanceIndex = i
+      end
+    end
+  end
+
+  for encounterIndex, expectedEncounterData in ipairs(expectedEncounters) do
     local encounterCompleted = false
     local encounterTried = false
 
@@ -354,8 +407,16 @@ function HaveWeMet.GetRaidDetailsString(activity)
       end
     end
 
+    local encounterLocked = false
+
+    if savedInstanceIndex then
+      encounterLocked = select(3, GetSavedInstanceEncounterInfo(savedInstanceIndex, encounterIndex))
+    end
+
     if encounterCompleted then
-      outputString = outputString .. checkIcon
+       outputString = outputString .. checkIcon
+    elseif encounterLocked and showLootable then
+      outputString = outputString .. lockedIcon
     else
       allComplete = false
 
@@ -412,11 +473,11 @@ function HaveWeMet.GetGenericDetailsString(activity)
   return HaveWeMet.GetKillsWipesCountString(kills, wipes)
 end
 
-function HaveWeMet.GetDetailsString(activity)
+function HaveWeMet.GetDetailsString(activity, showLootable)
   local expectedEncounters = HaveWeMet.GetEncounters(activity.Activity)
 
   if #expectedEncounters > 0 then
-    return HaveWeMet.GetRaidDetailsString(activity)
+    return HaveWeMet.GetRaidDetailsString(activity, showLootable)
   end
 
   return HaveWeMet.GetGenericDetailsString(activity)
@@ -509,6 +570,36 @@ function HaveWeMet.OnInstanceUpdate()
   HaveWeMet:AddActivity(playerGUID, activity)
 end
 
+function HaveWeMet:RequestLockoutInfo()
+  if not self.lockoutInfoRequested or self.lockoutInfoRequested > self.instanceInfoVersion then
+    self.lockoutInfoRequested = GetServerTime()
+    RequestRaidInfo()
+  end
+end
+
+function HaveWeMet:OnInstanceInfoUpdate()
+  self.instanceInfoVersion = GetServerTime()
+  local savedInstances = {}
+
+  for i = 1, GetNumSavedInstances() do
+    local _, saveId, reset, difficultyId = GetSavedInstanceInfo(i)
+    local instanceId = select(14, GetSavedInstanceInfo(i))
+
+    if reset > 0 then
+      local lockoutInfo = {
+        instanceId = instanceId,
+        difficultyId = difficultyId,
+        saveId = saveId,
+      }
+
+      table.insert(savedInstances, lockoutInfo)
+    end
+  end
+
+  self.savedInstances = savedInstances
+  self.OnInstanceUpdate()
+end
+
 function HaveWeMet:OnEncounterEnd(encounterId, difficultyId, success, time)
   local encounter = {
     Id = tonumber(encounterId),
@@ -516,6 +607,20 @@ function HaveWeMet:OnEncounterEnd(encounterId, difficultyId, success, time)
     Success = tonumber(success),
     Time = time,
   }
+
+  local this = self
+
+  if self.lastActivity and self.lastActivity.Type == "raid" then
+    -- delay saving encounter data after first pull to the include save id
+    if not self.lastActivity.SaveId then
+      self:RequestLockoutInfo()
+      C_Timer.After(5, function()
+        HaveWeMet.OnEncounterEnd(self, encounterId, difficultyId, success, time)
+      end)
+      print("Delaying saving encounter data.")
+      return
+    end
+  end
 
   Dragtheron_WelcomeBack.PreviousGroup = {}
 
