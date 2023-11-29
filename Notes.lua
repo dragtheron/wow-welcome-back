@@ -182,7 +182,7 @@ local function addTreeDataForActivityCategory(categoryInfo, node, collapses)
                 uniqueEncounters[encounterInfo.Id].wipes = uniqueEncounters[encounterInfo.Id].wipes + 1
             end
 
-            table.insert(uniqueEncounters[encounterInfo.Id].times, encounterInfo.Time)
+            table.insert(uniqueEncounters[encounterInfo.Id].times, {encounterInfo.Time, encounterInfo.Success})
         end
 
         for _, encounterInfo in pairs(uniqueEncounters) do
@@ -333,9 +333,15 @@ function WelcomeBack_NotesEncounterMixin:OnEnter(node)
     GameTooltip:AddLine(encounterName)
 
     if encounterInfo.times then
-        for _, disengageTime in ipairs(encounterInfo.times) do
+        for _, disengageTimeInfo in ipairs(encounterInfo.times) do
+            local disengageTime = disengageTimeInfo[1]
+            local success = disengageTimeInfo[2] == 1
             local encounterTime = addon.HaveWeMet.GetDateString(disengageTime)
-            GameTooltip:AddLine(encounterTime, 1, 1, 1)
+            local colorRight = success and { 0, 1, 0 } or { 1, 0, 0 }
+            local rightText = success and "Kill" or "Wipe"
+
+            GameTooltip:AddDoubleLine(
+                encounterTime, rightText, 1, 1, 1, colorRight[1], colorRight[2], colorRight[3])
         end
     end
 
