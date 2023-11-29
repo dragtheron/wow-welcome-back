@@ -360,6 +360,7 @@ function WelcomeBack_NotesActivityCategoryMixin:Init(node)
     local elementData = node:GetData()
     local categoryInfo = elementData.categoryInfo
     self.Label:SetText(categoryInfo.name)
+    self.Progress:SetText(#categoryInfo.activities)
     self:SetCollapseState(node:IsCollapsed())
 end
 

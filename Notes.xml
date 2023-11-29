@@ -10,6 +10,12 @@
                         <Anchor point="LEFT" x="10" y="2"/>
                     </Anchors>
                 </FontString>
+                <FontString parentKey="Progress" inherits="GameFontHighlight_NoShadow" justifyH="RIGHT">
+                    <Size y="12"/>
+                    <Anchors>
+                        <Anchor point="RIGHT" x="-26" y="2"/>
+                    </Anchors>
+                </FontString>
             </Layer>
             <Layer level="BACKGROUND">
                 <Texture parentKey="LeftPiece" atlas="Professions-recipe-header-left" useAtlasSize="true">
@@ -82,18 +88,7 @@
 			<OnLeave method="OnLeave"/>
 		</Scripts>
     </Button>
-    <Button name="WelcomeBack_NotesActivityTemplate" mixin="WelcomeBack_NotesActivityMixin" inherits="WelcomeBack_NotesCategoryTemplate" virtual="true">
-        <Layers>
-            <Layer level="OVERLAY">
-                <FontString parentKey="Progress" inherits="GameFontHighlight_NoShadow" justifyH="RIGHT">
-                    <Size y="12"/>
-                    <Anchors>
-                        <Anchor point="RIGHT" x="-26"/>
-                    </Anchors>
-                </FontString>
-            </Layer>
-        </Layers>
-    </Button>
+    <Button name="WelcomeBack_NotesActivityTemplate" mixin="WelcomeBack_NotesActivityMixin" inherits="WelcomeBack_NotesCategoryTemplate" virtual="true"/>
     <Button name="WelcomeBack_NotesActivityCategoryTemplate" mixin="WelcomeBack_NotesActivityCategoryMixin" inherits="WelcomeBack_NotesCategoryTemplate" virtual="true"/>
 
     <Button name="WelcomeBack_NotesEncounterTemplate" mixin="WelcomeBack_NotesEncounterMixin" inherits="WelcomeBack_NotesCharacterTemplate" virtual="true">
