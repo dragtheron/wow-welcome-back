@@ -6,9 +6,21 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
+## [1.4.0](https://git.tsno.de/dragtheron/wow-welcome-back/tags/1.4.0) - 2023-11-29
+
+<small>[Compare with 1.3.1](https://git.tsno.de/dragtheron/wow-welcome-back/compare/1.3.1...1.4.0)</small>
+
+### Features
+
+- track save id to join activities of the same lockout ([e6d24c2](https://git.tsno.de/dragtheron/wow-welcome-back/commit/e6d24c26acd5383cb9693c4b379ece3d1391601b) by Tobias Stettner).
+
 ## [1.3.1](https://git.tsno.de/dragtheron/wow-welcome-back/tags/1.3.1) - 2023-11-27
 
 <small>[Compare with 1.3.0](https://git.tsno.de/dragtheron/wow-welcome-back/compare/1.3.0...1.3.1)</small>
+
+### Features
+
+- update changelog ([d8faabe](https://git.tsno.de/dragtheron/wow-welcome-back/commit/d8faabef73e8d7188725af10ce5a99470591ae44) by Tobias Stettner).
 
 ### Bug Fixes
 
