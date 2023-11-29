@@ -307,6 +307,10 @@ function WelcomeBack_NotesActivityMixin:OnEnter(node)
         end
     end
 
+    if activityInfo.Activity.SaveId then
+        GameTooltip:AddLine(format("Save ID %d", activityInfo.Activity.SaveId))
+    end
+
     GameTooltip:Show()
 end
 
@@ -1001,7 +1005,7 @@ function Notes.OnActivityUpdate()
             local defaultDetailsString = addon.HaveWeMet.GetDetailsString({
                 Activity = lastActivity,
                 Encounters = {},
-            })
+            }, true)
 
             Notes.frame.Header.Progress:SetText(defaultDetailsString)
 
@@ -1012,7 +1016,7 @@ function Notes.OnActivityUpdate()
                 local playerLastActivity = playerProgress.Activities[#playerProgress.Activities]
 
                 if addon.HaveWeMet.IsEqualActivity(playerLastActivity.Activity, lastActivity) then
-                    local detailsString = addon.HaveWeMet.GetDetailsString(playerLastActivity)
+                    local detailsString = addon.HaveWeMet.GetDetailsString(playerLastActivity, true)
                     Notes.frame.Header.Progress:SetText(detailsString)
                 end
             end
