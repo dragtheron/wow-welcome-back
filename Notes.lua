@@ -1018,43 +1018,22 @@ function Notes.OnUpdate()
 end
 
 function Notes.OnActivityUpdate()
+    local detailsString, titleString, activity = addon.Progress.GetActivityProgress()
+    Notes.frame.Header.currentActivity = activity
+
+    if detailsString and titleString then
+        Notes.frame.Header.Label:SetText(titleString)
+        Notes.frame.Header.Progress:SetText(detailsString)
+        Notes.frame.Header.Progress:SetShown(true)
+        Notes.frame.Header.Label:SetShown(true)
+    else
+        Notes.frame.Header.Label:SetShown(false)
+        Notes.frame.Header.Progress:SetShown(false)
+    end
+
     if Notes.activityUpdateTimer then
         Notes.activityUpdateTimer:Cancel()
     end
-
-    Notes.activityUpdateTimer = C_Timer.NewTimer(3, function()
-        local lastActivity = addon.HaveWeMet.lastActivity
-        local activityName = addon.HaveWeMet.GetActivityTitle(lastActivity)
-
-        if lastActivity then
-            Notes.frame.Header.Label:SetText(format("Current Activity: |cffffffff%s|r", activityName))
-            Notes.frame.Header.Label:SetShown(true)
-
-            local defaultDetailsString = addon.HaveWeMet.GetDetailsString({
-                Activity = lastActivity,
-                Encounters = {},
-            }, true)
-
-            Notes.frame.Header.currentActivity = lastActivity
-            Notes.frame.Header.Progress:SetText(defaultDetailsString)
-
-            local playerGUID = UnitGUID("player")
-            local playerProgress = Dragtheron_WelcomeBack.KnownCharacters[playerGUID]
-
-            if playerProgress and #playerProgress.Activities > 0 then
-                local playerLastActivity = playerProgress.Activities[#playerProgress.Activities]
-
-                if addon.HaveWeMet.IsEqualActivity(playerLastActivity.Activity, lastActivity) then
-                    local detailsString = addon.HaveWeMet.GetDetailsString(playerLastActivity, true)
-                    Notes.frame.Header.currentActivity = playerLastActivity
-                    Notes.frame.Header.Progress:SetText(detailsString)
-                end
-            end
-        else
-            Notes.frame.Header.Label:SetShown(false)
-            Notes.frame.Header.Progress:SetShown(false)
-        end
-    end)
 end
 
 function Notes:SetSearchText(text)

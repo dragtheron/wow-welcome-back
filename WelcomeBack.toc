@@ -15,6 +15,7 @@
 Keystones.xml
 
 HaveWeMet.lua
+Progress.lua
 
 Notes.xml
 Overlay.lua

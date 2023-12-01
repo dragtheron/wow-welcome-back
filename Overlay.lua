@@ -44,51 +44,12 @@ end)
 frame:RegisterEvent("VARIABLES_LOADED")
 
 local function onUpdate()
-    local lastActivity = addon.HaveWeMet.lastActivity
+    local detailsString, titleString, activity = addon.Progress.GetActivityProgress()
+    currentActivity = activity
 
-    if lastActivity then
-        local activityName = addon.HaveWeMet.GetActivityTitle(lastActivity)
-
-        if lastActivity.ChallengeModeId then
-            activityName = activityName .. format(" (CMID %s)", lastActivity.ChallengeModeId)
-        end
-
-        if lastActivity.SaveId then
-            activityName = activityName .. format(" (ID %s)", lastActivity.SaveId)
-        end
-
-        frame.ActivityLine:SetText(format("Current Activity: |cffffffff%s|r", activityName))
-        frame.ActivityLine:SetShown(true)
-
-        local defaultDetailsString = addon.HaveWeMet.GetDetailsString({
-            Activity = lastActivity,
-            Encounters = {},
-        }, true)
-
-        currentActivity = {
-            Activity = lastActivity,
-            Encounters = {},
-        }
-
-        frame.ActivityProgress:SetText(defaultDetailsString)
-
-        local playerGUID = UnitGUID("player")
-        local playerProgress = Dragtheron_WelcomeBack.KnownCharacters[playerGUID]
-
-        if playerProgress and #playerProgress.Activities > 0 then
-            local playerLastActivity = playerProgress.Activities[#playerProgress.Activities]
-
-            if addon.HaveWeMet.IsEqualActivity(playerLastActivity.Activity, lastActivity) then
-                local detailsString = addon.HaveWeMet.GetDetailsString(playerLastActivity, true)
-                currentActivity = playerLastActivity
-                frame.ActivityProgress:SetText(detailsString)
-            end
-
-            frame.ActivityProgress:SetShown(true)
-        else
-            frame.ActivityProgress:SetShown(false)
-        end
-
+    if detailsString and titleString then
+        frame.ActivityLine:SetText(titleString)
+        frame.ActivityProgress:SetText(detailsString)
         frame.ActivityProgress:SetShown(true)
         frame.ActivityLine:SetShown(true)
     else

@@ -128,10 +128,27 @@ function HaveWeMet.IsEqualActivity(a, b)
     return false
   end
 
-  return a.Type == b.Type
-    and a.Id == b.Id
-    and a.KeystoneLevel == b.KeystoneLevel
-    and a.DifficultyId == b.DifficultyId
+  if a.Type ~= b.Type then
+    return false
+  end
+
+  if a.Id ~= b.Id then
+    return false
+  end
+
+  if a.DifficultyId ~= b.DifficultyId then
+    return false
+  end
+
+  if a.KeystoneLevel ~= b.KeystoneLevel then
+    return false
+  end
+
+  if a.SaveId ~= nil and a.SaveId ~= b.SaveId then
+    return false
+  end
+
+  return true
 end
 
 function HaveWeMet:AddActivity(guid, activity)
@@ -143,7 +160,7 @@ function HaveWeMet:AddActivity(guid, activity)
 
   if activity.Type == "raid" then
     for i = #characterInfo.Activities, 1, -1 do
-      local knownActivity = characterInfo.Activities[i]
+      local knownActivity = characterInfo.Activities[i].Activity
 
       if HaveWeMet.IsEqualActivity(knownActivity, activity) then
 
@@ -699,16 +716,18 @@ function HaveWeMet:OnInstanceInfoUpdate()
 end
 
 function HaveWeMet:OnEncounterEnd(encounterId, difficultyId, success, time)
+  success = tonumber(success)
+
   local encounter = {
     Id = tonumber(encounterId),
     DifficultyId = tonumber(difficultyId),
-    Success = tonumber(success),
+    Success = success,
     Time = time,
   }
 
   local this = self
 
-  if self.lastActivity and self.lastActivity.Type == "raid" then
+  if self.lastActivity and success == 1 and self.lastActivity.Type == "raid" then
     -- delay saving encounter data after first pull to the include save id
     if success and not self.lastActivity.SaveId then
       self:RequestLockoutInfo()
