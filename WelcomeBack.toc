@@ -1,6 +1,6 @@
-## Interface: 100200
+## Interface: 100207
 ## Title: Welcome Back
-## Version: 1.2.0
+## Version: 1.5.0
 ## Author: Tobias Stettner (Dragtheron)
 ## Notes: Keep track of any player you play with in instances.
 ## Notes-deDE: Führt eine Liste über alle Spieler, mit denen du mit Instanzen unterwegs warst.
@@ -15,6 +15,7 @@
 Keystones.xml
 
 HaveWeMet.lua
+Progress.lua
 
 Notes.xml
 Overlay.lua

@@ -56,7 +56,19 @@ function HaveWeMet:MatchingRaidLockout(savedInstanceIndex, activity)
   return savedInstance
     and activity.Type == "raid"
     and savedInstance.instanceId == activity.Id
-    and savedInstance.difficultyId == activity.DifficultyId
+    and (
+      savedInstance.difficultyId == activity.DifficultyId
+      -- timewalk raid
+      or savedInstance.difficultyId == 33 and activity.DifficultyId == 24
+    )
+end
+
+function HaveWeMet:IsCurrentLockout(activity)
+  for _, savedInstance in ipairs(self.savedInstances) do
+    if savedInstance.saveId == activity.SaveId then
+      return true
+    end
+  end
 end
 
 function HaveWeMet:CheckCharacters()
@@ -120,10 +132,31 @@ function HaveWeMet.IsEqualActivity(a, b)
     return false
   end
 
-  return a.Type == b.Type
-    and a.Id == b.Id
-    and a.KeystoneLevel == b.KeystoneLevel
-    and a.DifficultyId == b.DifficultyId
+  if a.Type ~= b.Type then
+    return false
+  end
+
+  if a.Id ~= b.Id then
+    return false
+  end
+
+  if a.DifficultyId ~= b.DifficultyId then
+    return false
+  end
+
+  if a.KeystoneLevel ~= b.KeystoneLevel then
+    return false
+  end
+
+  if a.saveId == nil and b.saveId ~= nil or a.saveId ~= nil and b.saveId == nil then
+    return false
+  end
+
+  if a.SaveId ~= nil and a.SaveId ~= b.SaveId then
+    return false
+  end
+
+  return true
 end
 
 function HaveWeMet:AddActivity(guid, activity)
@@ -134,10 +167,15 @@ function HaveWeMet:AddActivity(guid, activity)
   end
 
   if activity.Type == "raid" then
-    for i = #characterInfo.Activities, -1, 1 do
-      local knownActivity = characterInfo.Activities[i]
+    for i = #characterInfo.Activities, 1, -1 do
+      local knownActivity = characterInfo.Activities[i].Activity
 
       if HaveWeMet.IsEqualActivity(knownActivity, activity) then
+
+        if not knownActivity.SaveId then
+          knownActivity.SaveId = activity.SaveId
+        end
+
         characterInfo.currentActivityIndex = i
         return
       end
@@ -147,35 +185,111 @@ function HaveWeMet:AddActivity(guid, activity)
   local lastActivityIndex = #characterInfo.Activities
   local lastActivity = characterInfo.Activities[lastActivityIndex]
 
-  if not lastActivity or not HaveWeMet.IsEqualActivity(lastActivity.Activity, activity) then
+  if not lastActivity or lastActivity.Reset or not HaveWeMet.IsEqualActivity(lastActivity.Activity, activity) then
     Dragtheron_WelcomeBack.KnownCharacters[guid].DanglingActivity = {
       ["Time"] = GetServerTime(),
       ["Activity"] = activity,
       ["Encounters"] = {},
     }
 
-    characterInfo.currentActivityIndex = lastActivityIndex
+    characterInfo.currentActivityIndex = nil
     return
   end
 
-  characterInfo.currentActivityIndex = nil
+  characterInfo.currentActivityIndex = lastActivityIndex
+end
+
+function HaveWeMet:ResetLastActivity()
+  local guid = UnitGUID("player")
+  local characterInfo = Dragtheron_WelcomeBack.KnownCharacters[guid]
+
+  if not characterInfo then
+    return
+  end
+
+  local lastActivityIndex = #characterInfo.Activities
+  local lastActivity = characterInfo.Activities[lastActivityIndex]
+
+  if not lastActivity then
+    return
+  end
+
+  local lastActivityTitle = HaveWeMet.GetActivityTitle(lastActivity.Activity)
+  lastActivity.Reset = true
+  print(format("Activity \"%s\" has been closed.", lastActivityTitle))
+end
+
+function HaveWeMet:SetTrashCount(guid, totalTrash, currentTrash)
+  local characterInfo = Dragtheron_WelcomeBack.KnownCharacters[guid]
+
+  if not characterInfo.currentActivityIndex then
+    if characterInfo.DanglingActivity and characterInfo.DanglingActivity.Activity.KeystoneLevel then
+      table.insert(
+        characterInfo.Activities,
+        characterInfo.DanglingActivity)
+
+      characterInfo.DanglingActivity = nil
+      characterInfo.currentActivityIndex = #characterInfo.Activities
+    else
+      return
+    end
+  end
+
+  local previousTrashCount = characterInfo.Activities[characterInfo.currentActivityIndex].TrashCount
+
+  local trashCount = {
+    Total = tonumber(totalTrash),
+    Progress = tonumber(currentTrash),
+  }
+
+  if previousTrashCount and previousTrashCount.Progress >= trashCount.Progress then
+    return
+  end
+
+  characterInfo.Activities[characterInfo.currentActivityIndex].TrashCount = trashCount
+  HaveWeMet:AnnounceUpdate()
+end
+
+function HaveWeMet:SetDeathCount(guid, deaths)
+  local characterInfo = Dragtheron_WelcomeBack.KnownCharacters[guid]
+
+  if not characterInfo.currentActivityIndex then
+    if characterInfo.DanglingActivity then
+      table.insert(
+        characterInfo.Activities,
+        characterInfo.DanglingActivity)
+
+      characterInfo.DanglingActivity = nil
+      characterInfo.currentActivityIndex = #characterInfo.Activities
+    else
+      return
+    end
+  end
+
+  local previousDeathCount = characterInfo.Activities[characterInfo.currentActivityIndex].DeathCount
+
+  if previousDeathCount and previousDeathCount >= deaths then
+    return
+  end
+
+  characterInfo.Activities[characterInfo.currentActivityIndex].DeathCount = deaths
+  HaveWeMet:AnnounceUpdate()
 end
 
 function HaveWeMet:AddEncounter(guid, encounter)
   local characterInfo = Dragtheron_WelcomeBack.KnownCharacters[guid]
 
-  if characterInfo.DanglingActivity then
+  if not characterInfo.currentActivityIndex and characterInfo.DanglingActivity then
     table.insert(
       characterInfo.Activities,
       characterInfo.DanglingActivity)
 
     characterInfo.DanglingActivity = nil
+    characterInfo.currentActivityIndex = #characterInfo.Activities
   end
 
-  local lastActivityIdx = #characterInfo.Activities
-
   table.insert(
-    characterInfo.Activities[lastActivityIdx].Encounters,
+    characterInfo.Activities[characterInfo.currentActivityIndex].Encounters,
     encounter)
 end
 
@@ -247,26 +361,26 @@ end
 
 function HaveWeMet:CheckCharacter(character)
   local knownCharacter = self:RegisterCharacter(character)
+  local playerGUID = "" -- UnitGUID("player")
 
   if self:IsInGroup(character) then
     return
   end
 
-  local color = {
-    GREEN = "|cff00ff00",
-    RED = "|cffff0000",
-    GRAY = "|cff888888",
-  }
-
-  if knownCharacter then
-    local dateString = date("%c", knownCharacter.FirstContact)
-    printColored(
-      format(
-        "Already played with %s from %s.",
-        character.name, character.realm
-      ),
-      color.GREEN
+  if knownCharacter and character.guid ~= playerGUID then
+    local notificationString = format(
+      "|cff00ff00Already played with %s from %s.|r",
+      character.name, character.realm
     )
+
+    if knownCharacter.Note and knownCharacter.Note ~= "" then
+      notificationString = notificationString .. format(
+        " |cffffff00Note: |r%s",
+        knownCharacter.Note
+      )
+    end
+
+    print(notificationString)
   end
 end
 
@@ -275,8 +389,18 @@ function HaveWeMet:AnnounceUpdate()
 end
 
 function HaveWeMet:OnEvent(event, ...)
+  if event == "SCENARIO_CRITERIA_UPDATE" then
+    HaveWeMet:OnScenarioUpdate()
+  end
+
+  if event == "CHALLENGE_MODE_DEATH_COUNT_UPDATED" then
+    HaveWeMet:OnDeathCountUpdate()
+  end
+
   if event == "PLAYER_ENTERING_WORLD" then
     HaveWeMet:RequestLockoutInfo()
+    HaveWeMet:OnDeathCountUpdate()
+    HaveWeMet:OnScenarioUpdate()
   end
 
   if event == "VARIABLES_LOADED" then
@@ -311,10 +435,11 @@ function HaveWeMet:OnEvent(event, ...)
   if event == "ENCOUNTER_END" then
     HaveWeMet.OnInstanceUpdate()
     local time = GetServerTime()
+    local encounterId, _, difficultyId, _, success = ...
+    success = tonumber(success)
 
-    if time - HaveWeMet.EncounterStart > 20 then
-      local encounterId, _, difficultyId, _, success = ...
-      HaveWeMet:OnEncounterEnd(encounterId, difficultyId, success, time)
+    if success == 1 or HaveWeMet.EncounterStart == 0 or time - HaveWeMet.EncounterStart > 60 then
+      HaveWeMet:OnEncounterEnd(encounterId, difficultyId, success, HaveWeMet.EncounterStart, time)
       HaveWeMet:AnnounceUpdate()
     end
 
@@ -370,19 +495,40 @@ function HaveWeMet.GetDateString(time)
   return date("%c", time)
 end
 
-function HaveWeMet.GetRaidDetailsString(activity, showLootable)
+function HaveWeMet.GetRaidDetailsString(activityInfo, showLootable)
+  local details = HaveWeMet.GetDetails(activityInfo, showLootable)
+
+  local detailsString = details.TimedInfo and details.TimedInfo or details.EncounterInfo
+
+  if details.MobCount and not details.TimedInfo then
+    detailsString = details.MobCount .. "   " .. detailsString
+  end
+
+  if details.DeathCount then
+    detailsString = details.DeathCount .. "   " .. detailsString
+  end
+
+  return detailsString
+end
+
+function HaveWeMet.GetRaidDetailsTooltip(tooltip, activity, showLootable)
   local expectedEncounters = HaveWeMet.GetEncounters(activity.Activity)
   local outputString = ""
-
-  local checkIcon = "|A:UI-QuestTracker-Tracker-Check:16:16|a"
-  local failIcon = "|A:UI-QuestTracker-Objective-Fail:16:16|a"
-  local nubIcon = "|A:UI-QuestTracker-Objective-Nub:16:16|a"
-  local lockedIcon = "|A:Forge-Lock:16:16|a"
-  local deathIcon = "|A:poi-graveyard-neutral:16:12|a"
-
   local deaths = 0
-  local allComplete = true
   local savedInstanceIndex = nil
+
+  tooltip:AddLine(HaveWeMet.GetActivityTitle(activity.Activity))
+
+  if activity.Activity.SaveId then
+    tooltip:AddDoubleLine(format("Total wipes: %d", deaths), format("ID %s", activity.Activity.SaveId))
+  end
+
+  if activity.TrashCount then
+    local totalTrash = activity.TrashCount.Total
+    local killedTrash = activity.TrashCount.Progress
+    local percent = killedTrash / totalTrash * 100
+    tooltip:AddLine(format("Mobs killed: %d/%d (%.2f)", totalTrash, killedTrash, percent))
+  end
 
   if activity.Activity.Type == "raid" and showLootable then
     for i = 1, #HaveWeMet.savedInstances do
@@ -392,7 +538,7 @@ function HaveWeMet.GetRaidDetailsString(activity, showLootable)
     end
   end
 
-  for encounterIndex, expectedEncounterData in ipairs(expectedEncounters) do
+  for _, expectedEncounterData in ipairs(expectedEncounters) do
     local encounterCompleted = false
     local encounterTried = false
 
@@ -411,29 +557,51 @@ function HaveWeMet.GetRaidDetailsString(activity, showLootable)
     local encounterLocked = false
 
     if savedInstanceIndex then
-      encounterLocked = select(3, GetSavedInstanceEncounterInfo(savedInstanceIndex, encounterIndex))
-    end
+      for i = 1, addon.HaveWeMet.savedInstances[savedInstanceIndex].numEncounters do
+        local bossName, _, locked = GetSavedInstanceEncounterInfo(savedInstanceIndex, i)
 
-    if encounterCompleted then
-       outputString = outputString .. checkIcon
-    elseif encounterLocked and showLootable then
-      outputString = outputString .. lockedIcon
-    else
-      allComplete = false
-
-      if encounterTried then
-        outputString = outputString .. failIcon
-      else
-        outputString = outputString .. nubIcon
+        if bossName == expectedEncounterData.Name then
+          encounterLocked = locked
+        end
       end
     end
+
+    local color = {}
+
+    if encounterCompleted then
+       outputString = "Defeated"
+       color = { 0, 255, 0 }
+    elseif encounterLocked and showLootable then
+      outputString = "Not Lootable"
+      color = { 255, 0, 0 }
+    else
+      if encounterTried then
+        outputString = "Failed"
+        color = { 255, 0, 0 }
+      else
+        outputString = "Alive"
+      end
+    end
+
+    tooltip:AddDoubleLine(expectedEncounterData.Name, outputString, 1, 1, 1, color[1], color[2], color[3])
+  end
+end
+
+function HaveWeMet.GetEncounterStatusIcon(kills, wipes)
+  local deathIcon = "|A:poi-graveyard-neutral:16:12|a"
+  local checkIcon = "|A:UI-QuestTracker-Tracker-Check:16:16|a"
+  local failIcon = "|A:UI-QuestTracker-Objective-Fail:16:16|a"
+  local nubIcon = "|A:UI-QuestTracker-Objective-Nub:16:16|a"
+
+  if kills > 0 then
+    return checkIcon
   end
 
-  if deaths > 0 then
-    return format("%s %d   %s", deathIcon, deaths, outputString)
-  else
-    return outputString
+  if wipes > 0 then
+    return failIcon
   end
+
+  return nubIcon
 end
 
 function HaveWeMet.GetKillsWipesCountString(kills, wipes)
@@ -474,6 +642,132 @@ function HaveWeMet.GetGenericDetailsString(activity)
   return HaveWeMet.GetKillsWipesCountString(kills, wipes)
 end
 
+function HaveWeMet.GetDetails(activityInfo, showLootable)
+  local expectedEncounters = HaveWeMet.GetEncounters(activityInfo.Activity)
+
+  local details = {
+    DeathCount = nil,
+    MobCount = nil,
+    EncounterInfo = nil,
+    TimedInfo = nil,
+  }
+
+  local checkIcon = "|A:UI-QuestTracker-Tracker-Check:16:16|a"
+  local failIcon = "|A:UI-QuestTracker-Objective-Fail:16:16|a"
+  local nubIcon = "|A:UI-QuestTracker-Objective-Nub:16:16|a"
+  local lockedIcon = "|A:Forge-Lock:16:16|a"
+  local deathIcon = "|A:poi-graveyard-neutral:16:12|a"
+  local swordsIcon = "|A:pvptalents-warmode-swords:16:18|a"
+  local bossIcon = "|A:DungeonSkull:16:16|a"
+
+  local deaths = 0
+  local allComplete = true
+  local savedInstanceIndex = nil
+
+  if activityInfo.Activity.Type == "raid" and showLootable then
+    for i = 1, #HaveWeMet.savedInstances do
+      if addon.HaveWeMet:MatchingRaidLockout(i, activityInfo.Activity) then
+        savedInstanceIndex = i
+      end
+    end
+  end
+
+  if activityInfo.TrashCount and activityInfo.Activity.Type ~= "raid" then
+    local totalTrash = activityInfo.TrashCount.Total
+    local killedTrash = activityInfo.TrashCount.Progress
+    local percent = killedTrash / totalTrash * 100
+
+    if totalTrash > 0 then
+      if killedTrash == totalTrash then
+        details.MobCount = format("%s |cff00ff00Enemy Forces|r", checkIcon)
+      else
+        details.MobCount = format("%s %d%%", swordsIcon, percent)
+      end
+    end
+  end
+
+  details.EncounterInfo = ""
+
+  local completedEncounters = 0
+
+  for encounterIndex, expectedEncounterData in ipairs(expectedEncounters) do
+    local encounterCompleted = false
+    local encounterTried = false
+
+    for _, encounter in ipairs(activityInfo.Encounters) do
+      if tonumber(encounter.Id) == expectedEncounterData.Id then
+        encounterTried = true
+
+        if encounter.Success == 1 then
+          encounterCompleted = true
+        else
+          deaths = deaths + 1
+        end
+      end
+    end
+
+    if activityInfo.DeathCount ~= nil then
+      -- Challange Mode: Count unique deaths instead of encounter wipes
+      deaths = activityInfo.DeathCount
+    end
+
+    local encounterLocked = false
+
+    if savedInstanceIndex then
+      for i = 1, addon.HaveWeMet.savedInstances[savedInstanceIndex].numEncounters do
+        local bossName, _, locked = GetSavedInstanceEncounterInfo(savedInstanceIndex, i)
+
+        if bossName == expectedEncounterData.Name then
+          encounterLocked = locked
+        end
+      end
+    end
+
+    if encounterCompleted then
+      details.EncounterInfo = details.EncounterInfo .. checkIcon
+      completedEncounters = completedEncounters + 1
+    elseif encounterLocked and showLootable then
+      details.EncounterInfo = details.EncounterInfo .. lockedIcon
+      completedEncounters = completedEncounters + 1
+    else
+      allComplete = false
+
+      if encounterTried then
+        details.EncounterInfo = details.EncounterInfo .. failIcon
+      else
+        details.EncounterInfo = details.EncounterInfo .. nubIcon
+      end
+    end
+  end
+
+  details.EncounterInfo = format("%s %d/%d %s", bossIcon, completedEncounters, #expectedEncounters, details.EncounterInfo)
+
+  if allComplete then
+    details.EncounterInfo = format("%s |cff00ff00%s|r", checkIcon, "Cleared")
+
+    local completedKeystoneInfo = HaveWeMet.GetCompletedInfo(activityInfo)
+    if completedKeystoneInfo then
+      if completedKeystoneInfo.OnTime then
+        details.TimedInfo = format("%s |cff00ff00%s (+%d)|r", checkIcon, "In Time",  completedKeystoneInfo.KeystoneUpgradeLevels)
+      else
+        details.TimedInfo = format("%s |cffff0000%s|r", failIcon, "Not Timed")
+      end
+    end
+  end
+
+  if details.TimedInfo then
+    details.EncounterInfo = nil
+  end
+
+  if deaths > 0 then
+    details.DeathCount = format("%s %d", deathIcon, deaths)
+  else
+    details.DeathCount = nil
+  end
+
+  return details
+end
+
 function HaveWeMet.GetDetailsString(activity, showLootable)
   local expectedEncounters = HaveWeMet.GetEncounters(activity.Activity)
 
@@ -482,6 +776,14 @@ function HaveWeMet.GetDetailsString(activity, showLootable)
   end
 
   return HaveWeMet.GetGenericDetailsString(activity)
+end
+
+function HaveWeMet.GetDetailsTooltip(tooltip, activity, showLootable)
+  local expectedEncounters = HaveWeMet.GetEncounters(activity.Activity)
+
+  if #expectedEncounters > 0 then
+    return HaveWeMet.GetRaidDetailsTooltip(tooltip, activity, showLootable)
+  end
 end
 
 function HaveWeMet.AddActivityLine(tooltip, activity)
@@ -585,12 +887,14 @@ function HaveWeMet:OnInstanceInfoUpdate()
   for i = 1, GetNumSavedInstances() do
     local _, saveId, reset, difficultyId = GetSavedInstanceInfo(i)
     local instanceId = select(14, GetSavedInstanceInfo(i))
+    local numEncounters = select(11, GetSavedInstanceInfo(i))
 
     if reset > 0 then
       local lockoutInfo = {
         instanceId = instanceId,
         difficultyId = difficultyId,
         saveId = saveId,
+        numEncounters = numEncounters
       }
 
       table.insert(savedInstances, lockoutInfo)
@@ -601,26 +905,65 @@ function HaveWeMet:OnInstanceInfoUpdate()
   self.OnInstanceUpdate()
 end
 
-function HaveWeMet:OnEncounterEnd(encounterId, difficultyId, success, time)
+local function checkCriteriaTrashCount(criteria)
+  local criteriaName, _, completed, quantity, totalQuantity, _, _, quantityString, _, _, _, _, isWeightedProgress = C_Scenario.GetCriteriaInfo(criteria);
+
+  if not isWeightedProgress then
+    return 0, 0;
+  end
+
+  local trashTotal = totalQuantity;
+  local currentTrash = tonumber(strsub(quantityString, 1, -2));
+  return trashTotal, currentTrash
+end
+
+function HaveWeMet:OnScenarioUpdate()
+  local numCriteria = select(3, C_Scenario.GetStepInfo());
+
+  if not numCriteria then
+    return
+  end
+
+  for c = 1, numCriteria do
+    local totalTrash, currentTrash = checkCriteriaTrashCount(c)
+
+    if totalTrash > 0 then
+      for guid, _ in pairs(Dragtheron_WelcomeBack.LastGroup) do
+        self:SetTrashCount(guid, totalTrash, currentTrash)
+      end
+    end
+  end
+end
+
+function HaveWeMet:OnDeathCountUpdate()
+  local deaths = C_ChallengeMode.GetDeathCount()
+
+  if deaths and deaths > 0 then
+    for guid, _ in pairs(Dragtheron_WelcomeBack.LastGroup) do
+      self:SetDeathCount(guid, deaths)
+    end
+  end
+end
+
+function HaveWeMet:OnEncounterEnd(encounterId, difficultyId, success, startTime, endTime)
+  success = tonumber(success)
+
   local encounter = {
     Id = tonumber(encounterId),
     DifficultyId = tonumber(difficultyId),
-    Success = tonumber(success),
-    Time = time,
+    Success = success,
+    Time = endTime,
+    StartTime = startTime,
   }
 
-  local this = self
-
-  if self.lastActivity and self.lastActivity.Type == "raid" then
+  if self.lastActivity and not self.lastActivity.SaveId and success == 1 and self.lastActivity.Type == "raid" then
     -- delay saving encounter data after first pull to the include save id
-    if not self.lastActivity.SaveId then
-      self:RequestLockoutInfo()
-      C_Timer.After(5, function()
-        HaveWeMet.OnEncounterEnd(self, encounterId, difficultyId, success, time)
-      end)
-      print("Delaying saving encounter data.")
-      return
-    end
+    self:RequestLockoutInfo()
+    C_Timer.After(5, function()
+      HaveWeMet.OnEncounterEnd(self, encounterId, difficultyId, success, startTime, endTime)
+    end)
+    print("Delaying saving encounter data.")
+    return
   end
 
   Dragtheron_WelcomeBack.PreviousGroup = {}
@@ -637,6 +980,8 @@ function HaveWeMet:OnKeystoneEnd()
   for guid, _ in pairs(Dragtheron_WelcomeBack.LastGroup) do
     self:AddKeystoneToCharacter(guid, keystoneIndex)
   end
+
+  HaveWeMet:AnnounceUpdate()
 end
 
 function HaveWeMet:LFGActivityTooltip()
@@ -887,6 +1232,9 @@ HaveWeMet.frame:RegisterEvent("PARTY_MEMBER_ENABLE")
 HaveWeMet.frame:RegisterEvent("PARTY_MEMBER_DISABLE")
 HaveWeMet.frame:RegisterEvent("GUILD_PARTY_STATE_UPDATED")
 HaveWeMet.frame:RegisterEvent("CHALLENGE_MODE_COMPLETED")
+HaveWeMet.frame:RegisterEvent("PLAYER_LEAVE_COMBAT")
+HaveWeMet.frame:RegisterEvent("SCENARIO_CRITERIA_UPDATE")
+HaveWeMet.frame:RegisterEvent("CHALLENGE_MODE_DEATH_COUNT_UPDATED")
 
 HaveWeMet.frame:SetScript("OnEvent", HaveWeMet.OnEvent)
 

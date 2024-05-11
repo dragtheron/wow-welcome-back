@@ -1,8 +1,10 @@
+---@diagnostic disable: inject-field
 local addonName, addon = ...
 
 local Notes = {
     filters = {},
     initialized = false,
+    dataProvider = nil,
 }
 
 local Filter = EnumUtil.MakeEnum("CharacterName")
@@ -34,63 +36,20 @@ end
 local function sortEncounterData(a, b)
     local aData = a:GetData()
     local bData = b:GetData()
-    local aOrder = aData.encounterInfo.order
-    local bOrder = bData.encounterInfo.order
+
+    local aOrder = aData.encounterInfo and aData.encounterInfo.order or aData.order
+    local bOrder = bData.encounterInfo and bData.encounterInfo.order or bData.order
 
     if aOrder ~= bOrder then
         return aOrder < bOrder
     end
 end
 
-local function sortCategoryData(a, b)
-    local aData = a:GetData()
-    local bData = b:GetData()
+local characterDataProvider = CreateTreeDataProvider()
+characterDataProvider:GetRootNode():SetSortComparator(sortRootData, false, false)
 
-    local aCategoryInfo = aData.categoryInfo
-    local bCategoryInfo = bData.categoryInfo
-
-    if aCategoryInfo or bCategoryInfo then
-        if aCategoryInfo and not bCategoryInfo then
-            return true
-        elseif not aCategoryInfo and bCategoryInfo then
-            return false
-        elseif aCategoryInfo and bCategoryInfo then
-            local aOrder = aCategoryInfo.uiOrder
-            local bOrder = bCategoryInfo.uiOrder
-
-            if aOrder ~= bOrder then
-                return aOrder < bOrder
-            end
-
-            return strcmputf8i(aCategoryInfo.name, bCategoryInfo.name) < 0
-        end
-    end
-
-    local aOrder = aData.order
-    local bOrder = bData.order
-
-    if aOrder ~= bOrder then
-        return aOrder < bOrder
-    end
-
-    local aCharacterInfo = aData.characterInfo
-    local bCharacterInfo = bData.characterInfo
-    local aName = aCharacterInfo.Name
-    local bName = bCharacterInfo.Name
-
-    if aName ~= bName then
-        return strcmputf8i(aName, bName) < 0
-    end
-
-    local aRealm = aCharacterInfo.Realm
-    local bRealm = bCharacterInfo.Realm
-
-    if aRealm ~= bRealm then
-        return strcmputf8i(aRealm, bRealm) < 0
-    end
-
-    return strcmputf8i(aCharacterInfo.Id, bCharacterInfo.Id) < 0
-end
+local activitiesDataProvider = CreateTreeDataProvider()
+activitiesDataProvider:GetRootNode():SetSortComparator(sortRootData, false, false)
 
 local function addTreeDataForCategory(categoryInfo, node)
     if next(categoryInfo.characters) == nil then
@@ -99,26 +58,16 @@ local function addTreeDataForCategory(categoryInfo, node)
 
 
     local categoryNode = node:Insert({ categoryInfo = categoryInfo, group = categoryInfo.group })
-    local affectChildren = false
-    local skipSort = false
-    -- categoryNode:SetSortComparator(sortCategoryData, affectChildren, skipSort)
-
-    if categoryInfo.collapsed then
-        categoryNode:SetCollapsed(true)
-    end
-
     categoryNode:Insert({topPadding=true, order = -1});
 
-    for _, characterInfo in ipairs(categoryInfo.characters) do
-        categoryNode:Insert({
-            characterInfo = characterInfo,
-            order = 0,
-            highlightKnown = categoryInfo.highlightKnown,
-            highlightCurrentGroupMembers = categoryInfo.highlightCurrentGroupMembers,
-        })
-
-        if characterInfo.collapsed then
-            categoryNode:SetCollapsed(true)
+    for index, characterInfo in ipairs(categoryInfo.characters) do
+        if index < 25 then
+            categoryNode:Insert({
+                characterInfo = characterInfo,
+                order = index,
+                highlightKnown = categoryInfo.highlightKnown,
+                highlightCurrentGroupMembers = categoryInfo.highlightCurrentGroupMembers,
+            })
         end
     end
 
@@ -137,22 +86,22 @@ local function addTreeDataForActivityCategory(categoryInfo, node, collapses)
     local skipSort = false
     -- categoryNode:SetSortComparator(sortCategoryData, affectChildren, skipSort)
 
-    if categoryInfo.collapsed then
+    if collapses then
+        categoryNode:SetCollapsed(collapses.categories[categoryInfo.index])
+    else
         categoryNode:SetCollapsed(true)
     end
 
-    categoryNode:Insert({topPadding=true, order = -1});
+    categoryNode:Insert({ topPadding=true, order = -1 });
 
     for _, activityInfo in ipairs(categoryInfo.activities) do
         local activityNode = categoryNode:Insert({ activityInfo = activityInfo, order = 0 })
         activityNode:SetSortComparator(sortEncounterData, affectChildren, skipSort)
 
-        if collapses and collapses[activityInfo.index] then
-            activityNode:SetCollapses(true)
+        if collapses then
+            activityNode:SetCollapsed(collapses.activities[activityInfo.index])
         else
-            if activityInfo.collapsed then
-                activityNode:SetCollapsed(true)
-            end
+            activityNode:SetCollapsed(true)
         end
 
         local uniqueEncounters = {}
@@ -184,13 +133,21 @@ local function addTreeDataForActivityCategory(categoryInfo, node, collapses)
                 end
             end
 
+            if not uniqueEncounters[encounterInfo.Id] then
+                return
+            end
+
             if encounterInfo.Success == 1 then
                 uniqueEncounters[encounterInfo.Id].kills = uniqueEncounters[encounterInfo.Id].kills + 1
             else
                 uniqueEncounters[encounterInfo.Id].wipes = uniqueEncounters[encounterInfo.Id].wipes + 1
             end
 
-            table.insert(uniqueEncounters[encounterInfo.Id].times, encounterInfo.Time)
+            table.insert(uniqueEncounters[encounterInfo.Id].times, {encounterInfo.Time, encounterInfo.Success})
+        end
+
+        if activityInfo.TrashCount then
+            activityNode:Insert({ trashCount = activityInfo.TrashCount, order = -1 })
         end
 
         for _, encounterInfo in pairs(uniqueEncounters) do
@@ -277,6 +234,7 @@ end
 
 WelcomeBack_NotesActivityMixin = CreateFromMixins(WelcomeBack_NotesCategoryMixin)
 
+---@diagnostic disable-next-line: duplicate-set-field
 function WelcomeBack_NotesActivityMixin:Init(node)
     local elementData = node:GetData()
     local activityInfo = elementData.activityInfo
@@ -287,6 +245,7 @@ function WelcomeBack_NotesActivityMixin:Init(node)
     self:SetCollapseState(node:IsCollapsed())
 end
 
+---@diagnostic disable-next-line: duplicate-set-field
 function WelcomeBack_NotesActivityMixin:OnEnter(node)
     self.Label:SetFontObject(GameFontHighlight_NoShadow)
     local elementData = self:GetElementData()
@@ -308,29 +267,95 @@ function WelcomeBack_NotesActivityMixin:OnEnter(node)
     end
 
     if activityInfo.Activity.SaveId then
-        GameTooltip:AddLine(format("Save ID %d", activityInfo.Activity.SaveId))
+        GameTooltip:AddLine(format("Save ID %s", activityInfo.Activity.SaveId))
     end
 
     GameTooltip:Show()
 end
 
+---@diagnostic disable-next-line: duplicate-set-field
 function WelcomeBack_NotesActivityMixin:OnLeave(node)
     self.Label:SetFontObject(GameFontNormal_NoShadow)
     GameTooltip:Hide()
 end
 
+WelcomeBack_NotesTrashCountMixin = CreateFromMixins(WelcomeBack_NotesCategoryMixin)
+
+---@diagnostic disable-next-line: duplicate-set-field
+function WelcomeBack_NotesTrashCountMixin:Init(node)
+    local elementData = self:GetElementData()
+    local trashCount = elementData.data.trashCount
+    local mobsKilled = trashCount.Progress
+    local mobsTotal = trashCount.Total
+    local checkIcon = "|A:UI-QuestTracker-Tracker-Check:16:16|a"
+    local nubIcon = "|A:UI-QuestTracker-Objective-Nub:16:16|a"
+    local trashSummary
+
+    if mobsTotal and mobsKilled >= mobsTotal then
+        trashSummary = checkIcon
+    else
+        trashSummary = nubIcon
+    end
+
+    self.Label:SetFontObject(mobsKilled >= mobsTotal and GameFontHighlight_NoShadow or GameFontDisable)
+    self.Label:ClearAllPoints()
+    self.Label:SetPoint("LEFT", 33, 0)
+    self.Progress:ClearAllPoints()
+    self.Progress:SetPoint("LEFT", 6, 0)
+
+    if mobsTotal > 0 and mobsKilled >= mobsTotal then
+        self.Label:SetText("Enemy Forces")
+    else
+        self.Label:SetText(format("%d %% Enemy Forces", mobsKilled / mobsTotal * 100))
+    end
+
+    self.Progress:SetText(trashSummary)
+end
+
+---@diagnostic disable-next-line: duplicate-set-field
+function WelcomeBack_NotesTrashCountMixin:OnEnter(node)
+    self.Label:SetFontObject(GameFontHighlight_NoShadow)
+    local elementData = self:GetElementData()
+    local trashCount = elementData.data.trashCount
+    local mobsKilled = trashCount.Progress
+    local mobsTotal = trashCount.Total
+    local mobsPercent = mobsKilled / mobsTotal * 100
+    self.Label:SetFontObject(GameFontHighlight_NoShadow)
+    self.HighlightOverlay:SetShown(false)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:AddLine("Mobs Killed")
+    GameTooltip:AddDoubleLine(format("%d/%d", mobsKilled, mobsTotal), format("%.2f %%", mobsPercent), 1, 1, 1)
+    GameTooltip:Show()
+end
+
+---@diagnostic disable-next-line: duplicate-set-field
+function WelcomeBack_NotesTrashCountMixin:OnLeave(node)
+    local elementData = self:GetElementData()
+    local trashCount = elementData.data.trashCount
+    local mobsKilled = trashCount.Progress
+    local mobsTotal = trashCount.Total
+    self.Label:SetFontObject(mobsKilled >= mobsTotal and GameFontHighlight_NoShadow or GameFontDisable)
+    GameTooltip:Hide()
+end
+
 WelcomeBack_NotesEncounterMixin = CreateFromMixins(WelcomeBack_NotesCategoryMixin)
 
+---@diagnostic disable-next-line: duplicate-set-field
 function WelcomeBack_NotesEncounterMixin:Init(node)
     local elementData = node:GetData()
     local encounterInfo = elementData.encounterInfo
     local encounterTitle = encounterInfo.Name
-    local encounterCounters = addon.HaveWeMet.GetKillsWipesCountString(encounterInfo.kills, encounterInfo.wipes)
+    local encounterCounters = addon.HaveWeMet.GetEncounterStatusIcon(encounterInfo.kills, encounterInfo.wipes)
     self.Label:SetFontObject(encounterInfo.kills > 0 and GameFontHighlight_NoShadow or GameFontDisable)
     self.Label:SetText(encounterTitle)
+    self.Label:ClearAllPoints()
+    self.Label:SetPoint("LEFT", 33, 0)
     self.Progress:SetText(encounterCounters)
+    self.Progress:ClearAllPoints()
+    self.Progress:SetPoint("LEFT", 6, 0)
 end
 
+---@diagnostic disable-next-line: duplicate-set-field
 function WelcomeBack_NotesEncounterMixin:OnEnter(node)
     local elementData = self:GetElementData()
     local encounterInfo = elementData.data.encounterInfo
@@ -341,15 +366,22 @@ function WelcomeBack_NotesEncounterMixin:OnEnter(node)
     GameTooltip:AddLine(encounterName)
 
     if encounterInfo.times then
-        for _, disengageTime in ipairs(encounterInfo.times) do
+        for _, disengageTimeInfo in ipairs(encounterInfo.times) do
+            local disengageTime = disengageTimeInfo[1]
+            local success = disengageTimeInfo[2] == 1
             local encounterTime = addon.HaveWeMet.GetDateString(disengageTime)
-            GameTooltip:AddLine(encounterTime, 1, 1, 1)
+            local colorRight = success and { 0, 1, 0 } or { 1, 0, 0 }
+            local rightText = success and "Kill" or "Wipe"
+
+            GameTooltip:AddDoubleLine(
+                encounterTime, rightText, 1, 1, 1, colorRight[1], colorRight[2], colorRight[3])
         end
     end
 
     GameTooltip:Show()
 end
 
+---@diagnostic disable-next-line: duplicate-set-field
 function WelcomeBack_NotesEncounterMixin:OnLeave()
     local elementData = self:GetElementData()
     local encounterInfo = elementData.data.encounterInfo
@@ -358,10 +390,12 @@ end
 
 WelcomeBack_NotesActivityCategoryMixin = CreateFromMixins(WelcomeBack_NotesCategoryMixin)
 
+---@diagnostic disable-next-line: duplicate-set-field
 function WelcomeBack_NotesActivityCategoryMixin:Init(node)
     local elementData = node:GetData()
     local categoryInfo = elementData.categoryInfo
     self.Label:SetText(categoryInfo.name)
+    self.Progress:SetText(#categoryInfo.activities)
     self:SetCollapseState(node:IsCollapsed())
 end
 
@@ -375,8 +409,11 @@ mainFrame:SetSize(942, 658)
 mainFrame:SetToplevel(true)
 mainFrame:SetShown(false)
 mainFrame:SetPoint("TOPLEFT", 0, 0)
+---@diagnostic disable-next-line: undefined-field
 mainFrame:SetTitle("Welcome Back: Notes")
+---@diagnostic disable-next-line: undefined-field
 mainFrame:SetPortraitToUnit("player")
+---@diagnostic disable-next-line: undefined-field
 mainFrame:SetPortraitToAsset("Interface\\ICONS\\achievement_guildperk_havegroup willtravel")
 
 mainFrame:SetScript("OnHide", function()
@@ -401,13 +438,29 @@ header.Progress:SetPoint("RIGHT", 0, 0)
 header.Progress:SetJustifyH("RIGHT")
 header.Progress:SetText("...")
 
+header:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_BOTTOMRIGHT")
+
+    if self.currentActivity then
+        addon.HaveWeMet.GetDetailsTooltip(GameTooltip, self.currentActivity, true)
+    end
+
+    GameTooltip:Show()
+end)
+
+header:SetScript("OnLeave", function()
+    GameTooltip:Hide()
+end)
+
 mainFrame.Header = header
 
 local characterList = CreateFrame("Frame", "$parentCharacters", mainFrame)
 characterList:SetWidth(274)
 characterList:SetPoint("TOPLEFT", 5, -72)
 characterList:SetPoint("BOTTOMLEFT", 0, 5)
+---@diagnostic disable-next-line: undefined-field
 CallbackRegistryMixin.OnLoad(characterList)
+---@diagnostic disable-next-line: param-type-mismatch
 CallbackRegistryMixin.GenerateCallbackEvents(characterList, { "OnCharacterSelected" })
 
 characterList.Background = characterList:CreateTexture(nil, "BACKGROUND")
@@ -423,6 +476,7 @@ characterList.BackgroundNineSlice = CreateFrame("Frame", nil, characterList, "Ni
 characterList.BackgroundNineSlice.layoutType = "InsetFrameTemplate"
 characterList.BackgroundNineSlice:SetPoint("TOPLEFT", characterList.Background)
 characterList.BackgroundNineSlice:SetPoint("BOTTOMRIGHT", characterList.Background)
+---@diagnostic disable-next-line: undefined-field
 characterList.BackgroundNineSlice:OnLoad()
 
 characterList.SearchBox = CreateFrame("EditBox", nil, characterList, "SearchBoxTemplate")
@@ -438,11 +492,13 @@ end)
 characterList.ScrollBox = CreateFrame("Frame", nil, characterList, "WowScrollBoxList")
 characterList.ScrollBox:SetPoint("TOPLEFT", characterList.SearchBox, "BOTTOMLEFT", -5, -7)
 characterList.ScrollBox:SetPoint("BOTTOMRIGHT", -20, 5)
+---@diagnostic disable-next-line: undefined-field
 characterList.ScrollBox:OnLoad()
 
 characterList.ScrollBar = CreateFrame("EventFrame", nil, characterList, "MinimalScrollBar")
 characterList.ScrollBar:SetPoint("TOPLEFT", characterList.ScrollBox, "TOPRIGHT", 0, 0)
 characterList.ScrollBar:SetPoint("BOTTOMLEFT", characterList.ScrollBox, "BOTTOMRIGHT", 0, 0)
+---@diagnostic disable-next-line: undefined-field
 characterList.ScrollBar:OnLoad()
 
 local indent = 10
@@ -508,6 +564,7 @@ characterListView:SetElementExtentCalculator(function(_, node)
 end)
 
 function characterList.OnSelectionChanged(_, elementData, selected)
+    ---@diagnostic disable-next-line: undefined-field
     local button = characterList.ScrollBox:FindFrame(elementData)
 
     if button then
@@ -549,6 +606,7 @@ characterDetails.Background:SetAllPoints()
 characterDetails.NineSlice = CreateFrame("Frame", nil, characterDetails, "NineSlicePanelTemplate")
 characterDetails.NineSlice.layoutType = "InsetFrameTemplate"
 characterDetails.NineSlice:SetAllPoints()
+---@diagnostic disable-next-line: undefined-field
 characterDetails.NineSlice:OnLoad()
 
 local noteFrame = CreateFrame("Frame", nil, characterDetails)
@@ -569,11 +627,13 @@ noteFrame.Title:SetText("Good to Know")
 noteFrame.EditBox = CreateFrame("Frame", nil, noteFrame, "ScrollingEditBoxTemplate")
 noteFrame.EditBox:SetFrameStrata("HIGH")
 noteFrame.EditBox.fontName = "GameFontHighlight"
+---@diagnostic disable-next-line: undefined-field
 noteFrame.EditBox:SetDefaultText("Write something interesting about this character to be remembered next time playing together.")
 noteFrame.EditBox.maxLetters = 1000
 noteFrame.EditBox:SetPoint("TOPLEFT", noteFrame.TitleBox, "BOTTOMLEFT", 10, -3)
 noteFrame.EditBox:SetPoint("BOTTOMRIGHT", -32, 5)
 
+---@diagnostic disable-next-line: undefined-field
 noteFrame.EditBox:RegisterCallback("OnTextChanged", function() Notes.OnCharacterNoteChanged() end)
 
 characterDetails.Note = noteFrame
@@ -616,7 +676,9 @@ function characterDetails:Refresh()
 
 
     if characterInfo ~= self.characterInfo then
+    ---@diagnostic disable-next-line: undefined-field
         self.Note.EditBox:SetDefaultTextEnabled(true)
+    ---@diagnostic disable-next-line: undefined-field
         self.Note.EditBox:SetText(characterData.Note or "")
     end
 
@@ -636,16 +698,19 @@ activitiesFrame.Background:SetAllPoints()
 activitiesFrame.NineSlice = CreateFrame("Frame", nil, activitiesFrame, "NineSlicePanelTemplate")
 activitiesFrame.NineSlice.layoutType = "InsetFrameTemplate"
 activitiesFrame.NineSlice:SetAllPoints()
+---@diagnostic disable-next-line: undefined-field
 activitiesFrame.NineSlice:OnLoad()
 
 activitiesFrame.ScrollBox = CreateFrame("Frame", nil, activitiesFrame, "WowScrollBoxList")
 activitiesFrame.ScrollBox:SetPoint("TOPLEFT", 8, -7)
 activitiesFrame.ScrollBox:SetPoint("BOTTOMRIGHT", -20, 5)
+---@diagnostic disable-next-line: undefined-field
 activitiesFrame.ScrollBox:OnLoad()
 
 activitiesFrame.ScrollBar = CreateFrame("EventFrame", nil, activitiesFrame, "MinimalScrollBar")
 activitiesFrame.ScrollBar:SetPoint("TOPLEFT", activitiesFrame.ScrollBox, "TOPRIGHT", 0, -7)
 activitiesFrame.ScrollBar:SetPoint("BOTTOMLEFT", activitiesFrame.ScrollBox, "BOTTOMRIGHT", 0, 0)
+---@diagnostic disable-next-line: undefined-field
 activitiesFrame.ScrollBar:OnLoad()
 
 activitiesFrame.NoResultsText = activitiesFrame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
@@ -693,6 +758,11 @@ activitiesListView:SetElementFactory(function(factory, node)
             button:Init(_node)
         end
         factory("WelcomeBack_NotesEncounterTemplate", Initializer)
+    elseif elementData.trashCount then
+        local function Initializer(button, _node)
+            button:Init(_node)
+        end
+        factory("WelcomeBack_NotesTrashCountTemplate", Initializer)
     else
         factory("Frame")
     end
@@ -704,6 +774,10 @@ activitiesListView:SetElementExtentCalculator(function(_, node)
     local categoryPadding = 5
 
     if elementData.encounterInfo then
+        return baseElementHeight
+    end
+
+    if elementData.trashCount then
         return baseElementHeight
     end
 
@@ -725,13 +799,23 @@ activitiesListView:SetElementExtentCalculator(function(_, node)
 end)
 
 function activitiesFrame:StoreCollapses(scrollbox)
-    self.collapses = {}
-    local dataProvider = scrollbox:GetDataProvider()
-    local childrenNodes = dataProvider:GetChildrenNodes()
+    self.collapses = {
+        categories = {},
+        activities = {},
+    }
 
-    for _, child in ipairs(childrenNodes) do
-        if child.data and child:IsCollapsed() and child.data.activityInfo then
-            self.collapses[child.data.activityInfo.index] = true
+    local dataProvider = scrollbox:GetDataProvider()
+    local categoryNodes = dataProvider:GetChildrenNodes()
+
+    for _, categoryNode in ipairs(categoryNodes) do
+        if categoryNode.data and categoryNode:IsCollapsed() and categoryNode.data.categoryInfo then
+            self.collapses.categories[categoryNode.data.categoryInfo.index] = true
+        end
+
+        for _, activityNode in ipairs(categoryNode.nodes) do
+            if activityNode.data and activityNode:IsCollapsed() and activityNode.data.activityInfo then
+                self.collapses.activities[activityNode.data.activityInfo.index] = true
+            end
         end
     end
 end
@@ -744,10 +828,9 @@ function activitiesFrame:Refresh()
     local characterInfo = Notes.selectedCharacterInfo
     local characterData = Dragtheron_WelcomeBack.KnownCharacters[characterInfo.Id]
     local activities = characterData.Activities
-
-    local dataProvider = Notes:GenerateActivitiesDataProvider(self:GetCollapses())
+    Notes:RefreshActivityData(self:GetCollapses())
     ScrollUtil.InitScrollBoxListWithScrollBar(self.ScrollBox, self.ScrollBar, self.view)
-    self.ScrollBox:SetDataProvider(dataProvider, ScrollBoxConstants.RetainScrollPosition)
+    self.ScrollBox:SetDataProvider(activitiesDataProvider, ScrollBoxConstants.RetainScrollPosition)
     self.NoResultsText:SetShown(#activities == 0)
 end
 
@@ -756,31 +839,41 @@ mainFrame.Activities = activitiesFrame
 Notes.frame = mainFrame
 
 function Notes:Init()
-    local dataProvider = self:GenerateCharacterDataProvider()
     ScrollUtil.InitScrollBoxListWithScrollBar(characterList.ScrollBox, characterList.ScrollBar, characterListView)
-    characterList.ScrollBox:SetDataProvider(dataProvider, ScrollBoxConstants.RetainScrollPosition)
-    characterList.NoResultsText:SetShown(dataProvider:IsEmpty())
+    characterList.ScrollBox:SetDataProvider(characterDataProvider, ScrollBoxConstants.RetainScrollPosition)
 
-    if self.selectedCharacterInfo then
-        self.frame.CharacterDetails:Refresh()
-        self.frame.Activities:Refresh()
-    end
+    ScrollUtil.InitScrollBoxListWithScrollBar(self.frame.Activities.ScrollBox, self.frame.Activities.ScrollBar, self.frame.Activities.view)
+    self.frame.Activities.ScrollBox:SetDataProvider(activitiesDataProvider, ScrollBoxConstants.RetainScrollPosition)
+
+    self:Refresh()
 end
 
 function Notes:Refresh()
-    if self.selectedCharacterInfo then
-        activitiesFrame:StoreCollapses(activitiesFrame.ScrollBox)
+    if not self.shown then
+        return
     end
 
-    self:Init()
+    self:RefreshCharacterData()
+    characterList.NoResultsText:SetShown(characterDataProvider:IsEmpty())
+
+    if self.selectedCharacterInfo then
+        local characterInfo = Notes.selectedCharacterInfo
+        local characterData = Dragtheron_WelcomeBack.KnownCharacters[characterInfo.Id]
+        local activities = characterData.Activities
+        self.frame.Activities.NoResultsText:SetShown(#activities == 0)
+        activitiesFrame:StoreCollapses(activitiesFrame.ScrollBox)
+        Notes:RefreshActivityData(self.frame.Activities:GetCollapses())
+    end
 end
 
 function Notes:ShowFrame()
     self:Refresh()
+    self.shown = true
     ShowUIPanel(self.frame)
 end
 
 function Notes:HideFrame()
+    self.shown = false
     HideUIPanel(self.frame)
 end
 
@@ -794,8 +887,8 @@ end
 
 function Notes.OnEvent(self, event, ...)
     if event == "VARIABLES_LOADED" then
-        if not self.initialized then
-            self.initialized = true
+        if not Notes.initialized then
+            Notes.initialized = true
             Notes:Init()
         end
     end
@@ -815,7 +908,8 @@ function Notes:MatchesFilter(characterInfo)
     return true
 end
 
-function Notes:GenerateCharacterDataProvider()
+function Notes:RefreshCharacterData()
+    characterDataProvider:Flush()
     local characterInfo = {}
     local lastGroupCharacterInfo = {}
     local previousGroupCharacterInfo = {}
@@ -886,47 +980,55 @@ function Notes:GenerateCharacterDataProvider()
         knownCharactersCategoryInfo,
     }
 
-    local dataProvider = CreateTreeDataProvider()
-    local node = dataProvider:GetRootNode()
-    local affectChildren = false
-    local skipSort = false
-    node:SetSortComparator(sortRootData, affectChildren, skipSort)
+    local counter = 1
+
+    local rootNode = characterDataProvider:GetRootNode()
 
     for _, categoryInfo in pairs(categories) do
-        addTreeDataForCategory(categoryInfo, node)
+        addTreeDataForCategory(categoryInfo, rootNode)
+        counter = counter + 1
     end
-
-    return dataProvider
 end
 
-function Notes:GenerateActivitiesDataProvider(collapses)
+function Notes:RefreshActivityData(collapses)
+    activitiesDataProvider:Flush()
     local characterData = Dragtheron_WelcomeBack.KnownCharacters[self.selectedCharacterInfo.Id]
-    local dataProvider = CreateTreeDataProvider()
 
     if not characterData.Activities or #characterData.Activities == 0 then
-        return dataProvider
+        return
     end
 
-    local raidActivities = {}
+    local currentRaidActivities = {}
+    local oldRaidActivities = {}
     local keystoneActivities = {}
     local genericActivities = {}
 
-    local raidActivityInfo = {
-        name = "Raids",
+    local currentRaidActivityInfo = {
+        name = "Current Raids",
         uiOrder = 0,
         group = ActivityGroup.Raids,
+        index = 1,
+    }
+
+    local oldRaidActivityInfo = {
+        name = "Expired Raids",
+        uiOrder = 1,
+        group = ActivityGroup.Raids,
+        index = 2,
     }
 
     local keystoneActivityInfo = {
         name = "Mythic Keystone Dungeons",
-        uiOrder = 1,
+        uiOrder = 2,
         group = ActivityGroup.Keystones,
+        index = 3,
     }
 
     local genericActivityInfo = {
         name = "Other Activities",
-        uiOrder = 2,
+        uiOrder = 3,
         group = ActivityGroup.Generic,
+        index = 4,
     }
     for i = #characterData.Activities, 1, -1 do
         local activity = characterData.Activities[i]
@@ -935,42 +1037,29 @@ function Notes:GenerateActivitiesDataProvider(collapses)
         activity.index = i
 
         if activity.Activity.Type == "raid" then
-            if #raidActivities > 0 then
+            if addon.HaveWeMet:IsCurrentLockout(activity.Activity) then
+                table.insert(currentRaidActivities, activityInfo)
+            else
                 activityInfo.collapsed = true
+                table.insert(oldRaidActivities, activityInfo)
             end
-
-            table.insert(raidActivities, activityInfo)
         elseif activity.Activity.KeystoneLevel then
-            if #keystoneActivities > 0 then
-                activityInfo.collapsed = true
-            end
-
             table.insert(keystoneActivities, activityInfo)
         else
-            if #genericActivities > 0 then
-                activityInfo.collapsed = true
-            end
-
             table.insert(genericActivities, activity)
         end
     end
 
-    raidActivityInfo.activities = raidActivities
+    currentRaidActivityInfo.activities = currentRaidActivities
+    oldRaidActivityInfo.activities = oldRaidActivities
     keystoneActivityInfo.activities = keystoneActivities
     genericActivityInfo.activities = genericActivities
 
-    local categories = { raidActivityInfo, keystoneActivityInfo, genericActivityInfo }
-
-    local node = dataProvider:GetRootNode()
-    local affectChildren = false
-    local skipSort = false
-    node:SetSortComparator(sortRootData, affectChildren, skipSort)
+    local categories = { currentRaidActivityInfo, oldRaidActivityInfo, keystoneActivityInfo, genericActivityInfo }
 
     for _, categoryInfo in pairs(categories) do
-        addTreeDataForActivityCategory(categoryInfo, node, collapses)
+        addTreeDataForActivityCategory(categoryInfo, activitiesDataProvider:GetRootNode(), collapses)
     end
-
-    return dataProvider
 end
 
 function Notes:SetCharacterNameFilter(text)
@@ -979,6 +1068,10 @@ function Notes:SetCharacterNameFilter(text)
 end
 
 function Notes.OnUpdate()
+    if not Notes.frame:IsShown() then
+        return
+    end
+
     if Notes.updateTimer then
         Notes.updateTimer:Cancel()
     end
@@ -990,41 +1083,37 @@ function Notes.OnUpdate()
 end
 
 function Notes.OnActivityUpdate()
-    if Notes.activityUpdateTimer then
-        Notes.activityUpdateTimer:Cancel()
+    if not Notes.frame:IsShown() then
+        return
     end
 
-    Notes.activityUpdateTimer = C_Timer.NewTimer(3, function()
-        local lastActivity = addon.HaveWeMet.lastActivity
-        local activityName = addon.HaveWeMet.GetActivityTitle(lastActivity)
+    local lastActivity = addon.HaveWeMet.lastActivity
 
-        if lastActivity then
-            Notes.frame.Header.Label:SetText(format("Current Activity: |cffffffff%s|r", activityName))
-            Notes.frame.Header.Label:SetShown(true)
+    if Notes.updating then
+        return
+    end
 
-            local defaultDetailsString = addon.HaveWeMet.GetDetailsString({
-                Activity = lastActivity,
-                Encounters = {},
-            }, true)
+    Notes.updating = true
 
-            Notes.frame.Header.Progress:SetText(defaultDetailsString)
+    if not lastActivity then
+        Notes.updating = false
+        return
+    end
 
-            local playerGUID = UnitGUID("player")
-            local playerProgress = Dragtheron_WelcomeBack.KnownCharacters[playerGUID]
+    local detailsString, titleString, activity = addon.Progress.GetActivityProgress(lastActivity)
+    Notes.frame.Header.currentActivity = activity
 
-            if playerProgress and #playerProgress.Activities > 0 then
-                local playerLastActivity = playerProgress.Activities[#playerProgress.Activities]
+    if detailsString and titleString then
+        Notes.frame.Header.Label:SetText(titleString)
+        Notes.frame.Header.Progress:SetText(detailsString)
+        Notes.frame.Header.Progress:SetShown(true)
+        Notes.frame.Header.Label:SetShown(true)
+    else
+        Notes.frame.Header.Label:SetShown(false)
+        Notes.frame.Header.Progress:SetShown(false)
+    end
 
-                if addon.HaveWeMet.IsEqualActivity(playerLastActivity.Activity, lastActivity) then
-                    local detailsString = addon.HaveWeMet.GetDetailsString(playerLastActivity, true)
-                    Notes.frame.Header.Progress:SetText(detailsString)
-                end
-            end
-        else
-            Notes.frame.Header.Label:SetShown(false)
-            Notes.frame.Header.Progress:SetShown(false)
-        end
-    end)
+    Notes.updating = false
 end
 
 function Notes:SetSearchText(text)
