@@ -389,6 +389,10 @@ function HaveWeMet:AnnounceUpdate()
 end
 
 function HaveWeMet:OnEvent(event, ...)
+  if event == "CHALLENGE_MODE_START" or event == "CHALLENGE_MODE_RESET" then
+    HaveWeMet:ResetLastActivity()
+  end
+
   if event == "SCENARIO_CRITERIA_UPDATE" then
     HaveWeMet:OnScenarioUpdate()
   end
@@ -500,7 +504,7 @@ function HaveWeMet.GetRaidDetailsString(activityInfo, showLootable)
 
   local detailsString = details.TimedInfo and details.TimedInfo or details.EncounterInfo
 
-  if details.MobCount and not details.TimedInfo then
+  if activityInfo.Activity.KeystoneLevel and details.MobCount and not details.TimedInfo then
     detailsString = details.MobCount .. "   " .. detailsString
   end
 
@@ -672,17 +676,21 @@ function HaveWeMet.GetDetails(activityInfo, showLootable)
     end
   end
 
-  if activityInfo.TrashCount and activityInfo.Activity.Type ~= "raid" then
-    local totalTrash = activityInfo.TrashCount.Total
-    local killedTrash = activityInfo.TrashCount.Progress
-    local percent = killedTrash / totalTrash * 100
+  if activityInfo.Activity.Type ~= "raid" then
+    if activityInfo.TrashCount then
+      local totalTrash = activityInfo.TrashCount.Total
+      local killedTrash = activityInfo.TrashCount.Progress
+      local percent = killedTrash / totalTrash * 100
 
-    if totalTrash > 0 then
-      if killedTrash == totalTrash then
-        details.MobCount = format("%s |cff00ff00Enemy Forces|r", checkIcon)
-      else
-        details.MobCount = format("%s %d%%", swordsIcon, percent)
+      if totalTrash > 0 then
+        if killedTrash == totalTrash then
+          details.MobCount = format("%s |cff00ff00Enemy Forces|r", checkIcon)
+        else
+          details.MobCount = format("%s %d%%", swordsIcon, percent)
+        end
       end
+    else
+      details.MobCount = format("%s %d%%", swordsIcon, 0)
     end
   end
 
@@ -744,14 +752,15 @@ function HaveWeMet.GetDetails(activityInfo, showLootable)
 
   if allComplete then
     details.EncounterInfo = format("%s |cff00ff00%s|r", checkIcon, "Cleared")
+  end
 
-    local completedKeystoneInfo = HaveWeMet.GetCompletedInfo(activityInfo)
-    if completedKeystoneInfo then
-      if completedKeystoneInfo.OnTime then
-        details.TimedInfo = format("%s |cff00ff00%s (+%d)|r", checkIcon, "In Time",  completedKeystoneInfo.KeystoneUpgradeLevels)
-      else
-        details.TimedInfo = format("%s |cffff0000%s|r", failIcon, "Not Timed")
-      end
+
+  local completedKeystoneInfo = HaveWeMet.GetCompletedInfo(activityInfo)
+  if completedKeystoneInfo then
+    if completedKeystoneInfo.OnTime then
+      details.TimedInfo = format("%s |cff00ff00%s (+%d)|r", checkIcon, "In Time",  completedKeystoneInfo.KeystoneUpgradeLevels)
+    else
+      details.TimedInfo = format("%s |cffff0000%s|r", failIcon, "Not Timed")
     end
   end
 
@@ -1232,6 +1241,8 @@ HaveWeMet.frame:RegisterEvent("PARTY_MEMBER_ENABLE")
 HaveWeMet.frame:RegisterEvent("PARTY_MEMBER_DISABLE")
 HaveWeMet.frame:RegisterEvent("GUILD_PARTY_STATE_UPDATED")
 HaveWeMet.frame:RegisterEvent("CHALLENGE_MODE_COMPLETED")
+HaveWeMet.frame:RegisterEvent("CHALLENGE_MODE_START")
+HaveWeMet.frame:RegisterEvent("CHALLENGE_MODE_RESET")
 HaveWeMet.frame:RegisterEvent("PLAYER_LEAVE_COMBAT")
 HaveWeMet.frame:RegisterEvent("SCENARIO_CRITERIA_UPDATE")
 HaveWeMet.frame:RegisterEvent("CHALLENGE_MODE_DEATH_COUNT_UPDATED")

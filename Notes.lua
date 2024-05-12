@@ -86,11 +86,7 @@ local function addTreeDataForActivityCategory(categoryInfo, node, collapses)
     local skipSort = false
     -- categoryNode:SetSortComparator(sortCategoryData, affectChildren, skipSort)
 
-    if collapses then
-        categoryNode:SetCollapsed(collapses.categories[categoryInfo.index])
-    else
-        categoryNode:SetCollapsed(true)
-    end
+    categoryNode:SetCollapsed(true)
 
     categoryNode:Insert({ topPadding=true, order = -1 });
 
@@ -98,11 +94,7 @@ local function addTreeDataForActivityCategory(categoryInfo, node, collapses)
         local activityNode = categoryNode:Insert({ activityInfo = activityInfo, order = 0 })
         activityNode:SetSortComparator(sortEncounterData, affectChildren, skipSort)
 
-        if collapses then
-            activityNode:SetCollapsed(collapses.activities[activityInfo.index])
-        else
-            activityNode:SetCollapsed(true)
-        end
+        activityNode:SetCollapsed(true)
 
         local uniqueEncounters = {}
 
@@ -146,7 +138,7 @@ local function addTreeDataForActivityCategory(categoryInfo, node, collapses)
             table.insert(uniqueEncounters[encounterInfo.Id].times, {encounterInfo.Time, encounterInfo.Success})
         end
 
-        if activityInfo.TrashCount then
+        if activityInfo.Activity.KeystoneLevel and activityInfo.TrashCount then
             activityNode:Insert({ trashCount = activityInfo.TrashCount, order = -1 })
         end
 
@@ -416,27 +408,19 @@ mainFrame:SetPortraitToUnit("player")
 ---@diagnostic disable-next-line: undefined-field
 mainFrame:SetPortraitToAsset("Interface\\ICONS\\achievement_guildperk_havegroup willtravel")
 
-mainFrame:SetScript("OnHide", function()
-    addon.Overlay.frame:Show()
-end)
-
-mainFrame:SetScript("OnShow", function()
-    addon.Overlay.frame:Hide()
-end)
-
 local header = CreateFrame("Frame", "$parentHeader", mainFrame)
 header:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 64, -34)
 header:SetPoint("BOTTOMRIGHT", mainFrame, "TOPRIGHT", -28, -68)
 header.Label = header:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 header.Label:SetPoint("LEFT", 0, 0)
 header.Label:SetJustifyH("LEFT")
-header.Label:SetText("Loading...")
+header.Label:SetText("")
 header.Progress = header:CreateFontString(nil, "OVERLAY", "GameFontHighlight_NoShadow")
 header.Progress:SetHeight(header:GetHeight())
 header.Progress:SetWidth(200)
 header.Progress:SetPoint("RIGHT", 0, 0)
 header.Progress:SetJustifyH("RIGHT")
-header.Progress:SetText("...")
+header.Progress:SetText("")
 
 header:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_BOTTOMRIGHT")
@@ -633,8 +617,12 @@ noteFrame.EditBox.maxLetters = 1000
 noteFrame.EditBox:SetPoint("TOPLEFT", noteFrame.TitleBox, "BOTTOMLEFT", 10, -3)
 noteFrame.EditBox:SetPoint("BOTTOMRIGHT", -32, 5)
 
----@diagnostic disable-next-line: undefined-field
-noteFrame.EditBox:RegisterCallback("OnTextChanged", function() Notes.OnCharacterNoteChanged() end)
+noteFrame.EditBox.ScrollBox.EditBox:HookScript("OnKeyDown", function(self, key)
+    if key == "ENTER" and not IsShiftKeyDown() then
+        self:ClearFocus()
+        Notes.OnCharacterNoteChanged()
+    end
+end)
 
 characterDetails.Note = noteFrame
 
@@ -861,7 +849,7 @@ function Notes:Refresh()
         local characterData = Dragtheron_WelcomeBack.KnownCharacters[characterInfo.Id]
         local activities = characterData.Activities
         self.frame.Activities.NoResultsText:SetShown(#activities == 0)
-        activitiesFrame:StoreCollapses(activitiesFrame.ScrollBox)
+        -- activitiesFrame:StoreCollapses(activitiesFrame.ScrollBox)
         Notes:RefreshActivityData(self.frame.Activities:GetCollapses())
     end
 end
@@ -898,6 +886,7 @@ function Notes:MatchesFilter(characterInfo)
     for filterType, filter in pairs(Notes.filters) do
         if filterType == Filter.CharacterName then
             local forceRealm = true
+
             local characterName = string.lower(self.GetCharacterName(characterInfo, forceRealm))
             if not string.match(characterName, ".*" .. string.lower(filter) .. ".*") then
                 return false
@@ -1159,8 +1148,20 @@ function Notes.OnCharacterNoteChanged()
         return
     end
 
-    local text = Notes.frame.CharacterDetails.Note.EditBox:GetInputText()
+    local editBox = Notes.frame.CharacterDetails.Note.EditBox
+    local text = editBox:GetInputText()
+
+    if string.sub(text, -2, -1) == '\n' then
+        text = string.sub(text, 1, -1)
+    end
+
+    C_Timer.NewTimer(0.1, function()
+        editBox:ClearFocus()
+        editBox:SetText(text)
+    end)
+
     Dragtheron_WelcomeBack.KnownCharacters[Notes.selectedCharacterInfo.Id].Note = text
+    print(format("Saved note: %s", text))
 end
 
 Notes.frame:RegisterEvent("VARIABLES_LOADED")

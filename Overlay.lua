@@ -228,19 +228,19 @@ local function onUpdate()
             keystoneProgressEncounterFrame:Show()
         end
 
+        local previousDeathCount = keystoneProgressDeathCountText:GetText()
+        local previousMobCount = keystoneProgressMobCountText:GetText()
+
+        keystoneProgressDeathCountText:SetText(keystoneDetails.DeathCount)
+        keystoneProgressMobCountText:SetText(keystoneDetails.MobCount or "0 %")
+        keystoneProgressEncounterText:SetText(keystoneDetails.EncounterInfo)
+        keystoneProgressTimedInfoText:SetText(keystoneDetails.TimedInfo)
+
         keystoneProgressDeathCountFrame:SetWidth(keystoneProgressDeathCountText:GetStringWidth())
         keystoneProgressMobCountFrame:SetWidth(keystoneProgressMobCountText:GetStringWidth())
         keystoneProgressEncounterFrame:SetWidth(keystoneProgressEncounterText:GetStringWidth())
         keystoneProgressTimedInfoFrame:SetWidth(keystoneProgressTimedInfoText:GetStringWidth())
         keystoneProgressMobCountAnimationSheenTranslation:SetOffset(keystoneProgressMobCountFrame:GetWidth(), 0)
-
-        local previousDeathCount = keystoneProgressDeathCountText:GetText()
-        local previousMobCount = keystoneProgressMobCountText:GetText()
-
-        keystoneProgressDeathCountText:SetText(keystoneDetails.DeathCount)
-        keystoneProgressMobCountText:SetText(keystoneDetails.MobCount)
-        keystoneProgressEncounterText:SetText(keystoneDetails.EncounterInfo)
-        keystoneProgressTimedInfoText:SetText(keystoneDetails.TimedInfo)
         showKeystoneProgress()
 
         if previousDeathCount ~= keystoneDetails.DeathCount then
