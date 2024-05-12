@@ -1,6 +1,6 @@
 ## Interface: 100207
 ## Title: Welcome Back
-## Version: 1.5.1
+## Version: 1.5.2
 ## Author: Tobias Stettner (Dragtheron)
 ## Notes: Keep track of any player you play with in instances.
 ## Notes-deDE: Führt eine Liste über alle Spieler, mit denen du mit Instanzen unterwegs warst.

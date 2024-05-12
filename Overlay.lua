@@ -182,13 +182,19 @@ overlayFrame:RegisterEvent("VARIABLES_LOADED")
 local function showGenericProgess()
     activityProgress:SetShown(true)
     keystoneProgressFrame:SetShown(false)
-    overlayFrame:Show()
+
+    if Dragtheron_WelcomeBack.Settings.ShowOverlay then
+        overlayFrame:Show()
+    end
 end
 
 local function showKeystoneProgress()
     activityProgress:SetShown(false)
     keystoneProgressFrame:SetShown(true)
-    overlayFrame:Show()
+
+    if Dragtheron_WelcomeBack.Settings.ShowOverlay then
+        overlayFrame:Show()
+    end
 end
 
 local function onUpdate()
