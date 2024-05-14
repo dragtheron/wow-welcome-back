@@ -412,6 +412,22 @@ function HaveWeMet:OnEvent(event, ...)
       Dragtheron_WelcomeBack = {}
     end
 
+    local locale = GetLocale()
+
+    if not Dragtheron_WelcomeBack_EncounterCache then
+      print("Initialized Encounter Cache")
+      Dragtheron_WelcomeBack_EncounterCache = {}
+    end
+
+    HaveWeMet.cache = Dragtheron_WelcomeBack_EncounterCache
+
+    if HaveWeMet.cache["Locale"] ~= locale then
+      print("Initialized cache for language " .. locale)
+      Dragtheron_WelcomeBack_EncounterCache = {
+        ["Locale"] = locale;
+      }
+    end
+
     self.loaded = true
 
     if Dragtheron_WelcomeBack.Version == nil or Dragtheron_WelcomeBack.Version < 0.1 then
@@ -1093,6 +1109,7 @@ function HaveWeMet.GetSelectedInstanceId()
     return nil
   end
 
+  print("Encounter Journal Access - GetInstanceForGameMap (GetSelectedInstanceId): " .. mapId)
   return C_EncounterJournal.GetInstanceForGameMap(mapId) or nil
 end
 
@@ -1136,27 +1153,59 @@ function HaveWeMet.FilterEncounters(encounterData, filterIds)
   return encounters
 end
 
+function HaveWeMet.GetEncounterTitleFromCache(instanceId, encounterId)
+  return HaveWeMet.cache["instanceId:" .. instanceId .. ",encounterId:" .. encounterId]
+end
+
+function HaveWeMet.SaveEncounterTitleCache(instanceId, encounterId, title)
+  HaveWeMet.cache["instanceId:" .. instanceId .. ",encounterId:" .. encounterId] = title or "Created"
+  return HaveWeMet.cache["instanceId:" .. instanceId .. ",encounterId:" .. encounterId]
+end
+
+function HaveWeMet.GetInstanceTitleFromCache(instanceId)
+  return HaveWeMet.cache["instanceTitle:" .. instanceId]
+end
+
+function HaveWeMet.SaveInstanceTitleCache(instanceId, title)
+  HaveWeMet.cache["instanceTitle:" .. instanceId] = title or "Created"
+  return HaveWeMet.cache["instanceTitle:" .. instanceId]
+end
+
+function HaveWeMet.GetEncounterDataFromCache(instanceId)
+  return HaveWeMet.cache["instances:" .. instanceId]
+end
+
+function HaveWeMet.SaveEncounterDataCache(instanceId, data)
+  HaveWeMet.cache["instances:" .. instanceId] = data
+  return HaveWeMet.cache["instances:" .. instanceId]
+end
+
 function HaveWeMet.GetEncounterDataFromJournal(instanceId)
-  if HaveWeMet.cache["instances:" .. instanceId] then
-    return HaveWeMet.cache["instances:" .. instanceId]
+  local cachedData = HaveWeMet.GetEncounterDataFromCache(instanceId)
+
+  if cachedData then
+    return cachedData
+  else
+    cachedData = HaveWeMet.SaveEncounterDataCache(instanceId, {})
   end
 
+  print("Encounter Journal Access - GetInstanceForGameMap: " .. instanceId)
   local journalInstanceId = C_EncounterJournal.GetInstanceForGameMap(instanceId)
 
   if not journalInstanceId then
-    return {}
+    return cachedData
   end
 
   local currentInstanceId = HaveWeMet.GetSelectedInstanceId()
+  print("Encounter Journal Access - SelectInstance: " .. journalInstanceId)
   EJ_SelectInstance(journalInstanceId)
 
-  HaveWeMet.cache["instances:" .. instanceId] = {}
-
   for index = 1, 20 do
+    print("Encounter Journal Access - GetEncounterInfoByIndex: " .. index)
     local name, _, _, _, _, _, dungeonEncounterId = EJ_GetEncounterInfoByIndex(index)
 
     if not name then
-      return HaveWeMet.cache["instances:" .. instanceId]
+      return HaveWeMet.GetEncounterDataFromJournal(instanceId)
     end
 
     local encounterInfo = {
@@ -1165,62 +1214,91 @@ function HaveWeMet.GetEncounterDataFromJournal(instanceId)
       Index = index,
     }
 
-    table.insert(HaveWeMet.cache["instances:" .. instanceId], encounterInfo)
+    table.insert(cachedData, encounterInfo)
   end
 
   if currentInstanceId then
+    print("Encounter Journal Access - SelectInstance: " .. journalInstanceId)
     EJ_SelectInstance(currentInstanceId)
   end
 
-  return HaveWeMet.cache["instances:" .. instanceId]
+  HaveWeMet.SaveEncounterDataCache(instanceId, cachedData)
+  return cachedData
 end
 
 function HaveWeMet.GetEncounterTitleFromJournal(instanceId, encounterId)
+  local cachedData = HaveWeMet.GetEncounterTitleFromCache(instanceId, encounterId)
+
+  if cachedData then
+    return cachedData
+  else
+    cachedData = HaveWeMet.SaveEncounterTitleCache(instanceId, encounterId, "Unknown")
+  end
+
+  print("Encounter Journal Access - GetInstanceForGameMap: " .. instanceId)
   local journalInstanceId = C_EncounterJournal.GetInstanceForGameMap(instanceId)
 
   if not journalInstanceId then
-    return "Unknown"
+    return cachedData
   end
 
   local currentInstanceId = HaveWeMet.GetSelectedInstanceId()
+  print("Encounter Journal Access - SelectInstance: " .. journalInstanceId)
   EJ_SelectInstance(journalInstanceId)
 
   for index = 1, 20 do
+    print("Encounter Journal Access - GetEncounterInfoByIndex: " .. instanceId)
     local name, _, _, _, _, _, dungeonEncounterId = EJ_GetEncounterInfoByIndex(index)
 
     if not name then
       if currentInstanceId then
+        print("Encounter Journal Access - SelectInstance: " .. currentInstanceId)
         EJ_SelectInstance(currentInstanceId)
       end
 
-      return "Unknown"
+      return cachedData
     end
 
     if dungeonEncounterId == encounterId then
       if currentInstanceId then
+        print("Encounter Journal Access - SelectInstance: " .. currentInstanceId)
         EJ_SelectInstance(currentInstanceId)
       end
 
+      HaveWeMet.SaveEncounterTitleCache(instanceId, encounterId, name)
       return name
     end
   end
 end
 
 function HaveWeMet.GetInstanceName(instanceId)
+  local cachedData = HaveWeMet.GetInstanceTitleFromCache(instanceId)
+
+  if cachedData then
+    return cachedData
+  else
+    cachedData = HaveWeMet.SaveInstanceTitleCache(instanceId, "Unknown")
+  end
+
+  print("Encounter Journal Access - GetInstanceForGameMap: " .. instanceId)
   local journalInstanceId = C_EncounterJournal.GetInstanceForGameMap(instanceId)
 
   if not journalInstanceId then
-    return "Unknown"
+    print("|cffff0000Can not find journalInstanceId " .. instanceId)
+    return cachedData
   end
 
   local currentInstanceId = HaveWeMet.GetSelectedInstanceId()
+  print("Encounter Journal Access - SelectInstance: " .. journalInstanceId)
   EJ_SelectInstance(journalInstanceId)
   local name = EJ_GetInstanceInfo()
 
   if currentInstanceId then
+    print("Encounter Journal Access - SelectInstance: " .. currentInstanceId)
     EJ_SelectInstance(currentInstanceId)
   end
 
+  HaveWeMet.SaveInstanceTitleCache(instanceId, name)
   return name
 end
 

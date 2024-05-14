@@ -1,12 +1,12 @@
 ## Interface: 100207
 ## Title: Welcome Back
-## Version: 1.5.2
+## Version: 1.5.3
 ## Author: Tobias Stettner (Dragtheron)
 ## Notes: Keep track of any player you play with in instances.
 ## Notes-deDE: Führt eine Liste über alle Spieler, mit denen du mit Instanzen unterwegs warst.
 ## IconTexture: Interface\ICONS\achievement_guildperk_havegroup willtravel
 
-## SavedVariables: Dragtheron_WelcomeBack
+## SavedVariables: Dragtheron_WelcomeBack Dragtheron_WelcomeBack_EncounterCache
 
 ## X-License: All Rights Reserved
 ## X-Website: https://git.tsno.de/dragtheron/wow-welcome-back
