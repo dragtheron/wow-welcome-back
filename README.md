@@ -1,6 +1,7 @@
 # Welcome Back
 
-Welcome Back automatically keeps track of players in your group or raid and informs you about players which you met before since activating this AddOn.
+Welcome Back automatically keeps track of other players while playing in a group or raid and wikk inform you when you already have played together (since activating this AddOn).
+Additionally, you can add a personal note to each player that may help you to recognize specialties the next time you meet.
 
 ## Main Features
 
